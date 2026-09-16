@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { EVENT_DATES_LABEL } from "@/lib/event";
 
 const foundations = [
@@ -36,9 +38,14 @@ export default function Home() {
           ))}
         </ul>
 
-        <p className="spec-link">
-          Architecture governed by the master specification
-        </p>
+        <div className="home-actions">
+          <Link className="button button-primary" href="/login">
+            Staff sign in
+          </Link>
+          <p className="spec-link">
+            Architecture governed by the master specification
+          </p>
+        </div>
       </section>
     </main>
   );

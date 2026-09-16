@@ -285,6 +285,55 @@ flowchart TD
 - Dashboard must support desktop and tablet use.
 - Success, warning, repeat and error states must not rely on color alone.
 
+### 6.3 Interaction-state and edge-case standard
+
+Every user-facing action must define and implement the following states before
+the action is considered complete:
+
+| State | Required behavior |
+| --- | --- |
+| Initial | Explain the task, required information and next action |
+| Loading | Disable duplicate submissions, preserve entered data and show the action in progress |
+| Success | Confirm the completed result and provide the natural next action |
+| Recoverable failure | Use plain language, retain safe input, explain how to retry or recover |
+| Permission failure | Explain that access is unavailable without exposing security-sensitive information |
+| Empty | Explain why no data exists and direct authorized users to the first useful action |
+| Offline | Clearly distinguish queued/pending work from server-confirmed completion |
+
+The interface must use an accessible status message or alert, text labels and
+semantic color together. It must not rely on toast messages alone, auto-dismiss
+critical failures, or claim completion before the server confirms it.
+
+All API failures must return a stable machine-readable error code, a safe
+human-readable message and whether the action is retryable. The frontend must
+show the safe message and a support reference code. Raw provider, database,
+token and infrastructure errors are logged server-side but must not be exposed
+to users.
+
+#### Required flow behavior
+
+- **Staff login:** Show that a magic link was requested without confirming
+  whether the email is allowlisted. After a successful callback, show
+  “Signed in successfully” on the dashboard. Invalid, expired, consumed or
+  failed links return to login with a visible recovery message and a request
+  for a new link.
+- **Guest creation/import:** Preserve valid typed fields when validation fails.
+  Explain duplicate-email conflicts and link to the existing guest instead of
+  silently creating another record. Confirm successful creation with the guest
+  name and the next pass-generation action.
+- **QR generation/reissue:** Disable repeated generation while processing.
+  Confirm the active credential version only after it is stored. Explain
+  revoked, unavailable and failed-generation states without exposing tokens.
+- **Pass delivery:** Clearly distinguish queued, sent, delivered, bounced and
+  failed statuses. A resend must retain the same active credential unless an
+  organizer explicitly rotates it.
+- **QR scanning:** Immediately show server-confirmed first scan, repeat scan,
+  invalid pass, revoked pass, inactive guest, out-of-hours and network-pending
+  results. A decoded QR is not a successful check-in until the server confirms
+  it.
+- **Dashboard/reporting:** Show loading skeletons, no-data explanations,
+  stale-connection state, filter-empty state and export result/failure state.
+
 ---
 
 ## 7. Backend Architecture
@@ -908,6 +957,11 @@ All endpoint names are provisional until the dedicated API contract is approved.
 - JSON request and response bodies unless returning CSV or an image.
 - Schema validation on every request.
 - Stable machine-readable error codes.
+- Every non-success response returns `{ error: { code, message, retryable } }`;
+  retry-delayed responses additionally return `retryAfterSeconds` and the
+  `Retry-After` response header.
+- The UI displays the safe message and reference code, while server logs retain
+  the provider error code without logging secrets or personal data.
 - Generic authentication responses that avoid email enumeration.
 - Idempotency keys for scan and batch operations.
 - Pagination for guests, attendance and audit history.
@@ -1031,6 +1085,9 @@ flowchart LR
 - Seeded test event and guests
 - Test admin allowlist
 - Resend test mode or mocked delivery
+- `DEV_PREVIEW_MODE=true` may expose mock interface data without staff login
+  only when `NODE_ENV=development`; it is server-only and must remain disabled
+  in preview and production environments.
 
 #### Preview
 
@@ -1071,6 +1128,9 @@ Secrets must be placed in local or hosted environment configuration and must not
 - Non-allowlisted addresses receive no access.
 - Deactivated staff lose protected access.
 - Each role is limited to its documented capabilities.
+- A successful login visibly confirms access on the dashboard.
+- Invalid, expired, consumed and malformed links display an accessible recovery message on login.
+- A failed link exchange does not leave the user on an ambiguous blank or protected screen.
 
 ### 21.2 Guest integrity
 
@@ -1142,6 +1202,13 @@ Secrets must be placed in local or hosted environment configuration and must not
 - Accessibility checks pass on critical workflows.
 - Load test passes for 500 guests and five concurrent scanners.
 - Event-day rehearsal is completed before launch.
+
+### 21.9 Interaction-state coverage
+
+- Every mutation has initial, loading, success and recoverable-failure states.
+- Every permission, offline, empty and stale-data state has documented copy and recovery behavior.
+- Critical confirmation/error messages are accessible without relying on color or transient toast notifications.
+- Repeated clicks, refreshes and network retries cannot silently duplicate a user-visible action.
 
 ---
 

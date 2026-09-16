@@ -1,3 +1,5 @@
+export const EVENT_ID = "3ca63df5-0a3a-452f-a38d-151020260001";
+
 export const EVENT_TIMEZONE = "Asia/Kuala_Lumpur";
 
 export const EVENT_DATES = [

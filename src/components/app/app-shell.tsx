@@ -1,0 +1,55 @@
+import Link from "next/link";
+import { LayoutDashboard, QrCode, Send, Users } from "lucide-react";
+
+import type { StaffMember } from "@/lib/auth/staff";
+
+const navigation = [
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/guests", label: "Guests", icon: Users },
+  { href: "/scanner", label: "Scan pass", icon: QrCode },
+  { href: "/admin/delivery", label: "Pass delivery", icon: Send },
+];
+
+export function AppShell({
+  children,
+  currentPath,
+  staffMember,
+}: {
+  children: React.ReactNode;
+  currentPath: string;
+  staffMember: StaffMember;
+}) {
+  return (
+    <div className="app-shell">
+      <aside className="app-sidebar">
+        <Link className="app-brand" href="/dashboard">
+          <span>GTP</span>
+          <strong>Check-in</strong>
+        </Link>
+        <nav aria-label="Primary navigation" className="app-navigation">
+          {navigation.map(({ href, icon: Icon, label }) => (
+            <Link
+              aria-current={currentPath === href ? "page" : undefined}
+              className={currentPath === href ? "nav-link nav-link-active" : "nav-link"}
+              href={href}
+              key={href}
+            >
+              <Icon aria-hidden="true" size={18} strokeWidth={1.8} />
+              {label}
+            </Link>
+          ))}
+        </nav>
+        <div className="staff-summary">
+          <span className="staff-avatar" aria-hidden="true">
+            {staffMember.normalized_email.slice(0, 1).toUpperCase()}
+          </span>
+          <div>
+            <strong>{staffMember.role}</strong>
+            <span>{staffMember.normalized_email}</span>
+          </div>
+        </div>
+      </aside>
+      <main className="app-main">{children}</main>
+    </div>
+  );
+}
