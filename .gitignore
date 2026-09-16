@@ -1,0 +1,26 @@
+# Dependencies
+/node_modules
+
+# Next.js
+/.next
+/out
+
+# Test and coverage output
+/coverage
+/playwright-report
+/test-results
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+
+# System and editor files
+.DS_Store
+*.pem

@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f3f7f5;
+  --foreground: #10231d;
+  --surface: #ffffff;
+  --muted: #5e7069;
+  --line: #dce7e2;
+  --accent: #087f5b;
+  --accent-soft: #dff5ec;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--background);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(8, 127, 91, 0.1), transparent 32rem),
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+.page-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.hero-card {
+  width: min(100%, 46rem);
+  padding: clamp(1.5rem, 5vw, 3.5rem);
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 1.5rem 4rem rgba(16, 35, 29, 0.08);
+}
+
+.eyebrow {
+  margin: 0 0 1rem;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+h1 {
+  max-width: 12ch;
+  margin: 0;
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  letter-spacing: -0.055em;
+  line-height: 0.95;
+}
+
+.lede {
+  max-width: 42rem;
+  margin: 1.5rem 0 0;
+  color: var(--muted);
+  font-size: clamp(1rem, 2vw, 1.125rem);
+  line-height: 1.7;
+}
+
+.event-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.event-details div {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+  background: var(--surface);
+}
+
+.event-details dt {
+  margin-bottom: 0.35rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.event-details dd {
+  margin: 0;
+  font-weight: 650;
+}
+
+.foundation-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.foundation-list li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.foundation-list li::before {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--accent);
+  content: "";
+}
+
+.spec-link {
+  display: inline-flex;
+  margin-top: 2rem;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.875rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.spec-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 36rem) {
+  .event-details {
+    grid-template-columns: 1fr;
+  }
+}
