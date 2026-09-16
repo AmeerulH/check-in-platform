@@ -555,6 +555,19 @@ table td span {
   font-size: 0.8125rem;
 }
 
+.activity-list .activity-empty {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+  padding: 2rem 1.25rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.activity-empty strong {
+  color: var(--foreground);
+}
+
 .directory-toolbar {
   flex-wrap: wrap;
 }
