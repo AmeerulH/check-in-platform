@@ -18,6 +18,9 @@
 # Vercel
 .vercel
 
+# Supabase CLI local connection metadata
+supabase/.temp/
+
 # TypeScript
 *.tsbuildinfo
 
