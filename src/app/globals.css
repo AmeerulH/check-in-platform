@@ -647,6 +647,11 @@ h1 {
   border-radius: 999px;
 }
 
+.attendance-table-empty .empty-state {
+  min-height: max(20rem, calc(100dvh - 25rem));
+  align-content: center;
+}
+
 .panel-heading,
 .directory-toolbar {
   display: flex;

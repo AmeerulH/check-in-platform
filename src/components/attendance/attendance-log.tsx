@@ -129,7 +129,7 @@ export function AttendanceLog({ eventDays, initialPage }: AttendanceLogProps) {
         </button>
       </form>
       <div className="attendance-table-scroll" ref={scrollRootRef}>
-        <table className="attendance-table">
+        <table className={`attendance-table${!attendanceQuery.isLoading && !items.length ? " attendance-table-empty" : ""}`}>
           <thead>
             <tr>
               <th>Guest</th>
