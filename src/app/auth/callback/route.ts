@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { bindStaffMembership } from "@/lib/auth/staff";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
@@ -13,11 +14,20 @@ export async function GET(request: Request) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-  if (error) {
+  const email = data.session?.user.email;
+  const userId = data.session?.user.id;
+  const hasStaffAccess =
+    !error &&
+    typeof email === "string" &&
+    typeof userId === "string" &&
+    await bindStaffMembership({ email, userId });
+
+  if (!hasStaffAccess) {
+    await supabase.auth.signOut();
     return NextResponse.redirect(
-      new URL("/login?error=invalid-link", requestUrl.origin),
+      new URL("/login?error=access-denied", requestUrl.origin),
     );
   }
 

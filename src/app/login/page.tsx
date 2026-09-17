@@ -19,10 +19,13 @@ export default async function LoginPage({
         <p className="eyebrow">GTP 2026 · Staff access</p>
         <h1 id="login-heading">Sign in to check-in</h1>
         <p className="lede">
-          Use the email address approved by your event organizer. We will send
-          you a secure sign-in link.
+          Use Google with an email approved by your event organizer, or request
+          a secure email link.
         </p>
-        <LoginForm invalidLink={error === "invalid-link"} />
+        <LoginForm
+          accessDenied={error === "access-denied"}
+          invalidLink={error === "invalid-link"}
+        />
         <Link className="text-link" href="/">
           Return to platform overview
         </Link>

@@ -22,6 +22,36 @@ export function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
 }
 
+export async function bindStaffMembership({
+  email,
+  userId,
+}: {
+  email: string;
+  userId: string;
+}) {
+  const admin = createSupabaseAdminClient();
+  const normalizedEmail = normalizeEmail(email);
+  const { data: membership, error } = await admin
+    .from("event_memberships")
+    .select("id, auth_user_id, active")
+    .eq("event_id", EVENT_ID)
+    .eq("normalized_email", normalizedEmail)
+    .maybeSingle();
+
+  if (error || !membership?.active) return false;
+  if (membership.auth_user_id) return membership.auth_user_id === userId;
+
+  const { data: boundMembership, error: bindError } = await admin
+    .from("event_memberships")
+    .update({ auth_user_id: userId })
+    .eq("id", membership.id)
+    .is("auth_user_id", null)
+    .select("auth_user_id")
+    .maybeSingle();
+
+  return !bindError && boundMembership?.auth_user_id === userId;
+}
+
 export async function getCurrentStaffMember(): Promise<StaffMember | null> {
   if (isDevelopmentPreview()) {
     return previewOrganizer;
@@ -52,7 +82,7 @@ export async function getCurrentStaffMember(): Promise<StaffMember | null> {
     return null;
   }
 
-  if (data.auth_user_id && data.auth_user_id !== userId) {
+  if (!data.auth_user_id || data.auth_user_id !== userId) {
     return null;
   }
 
