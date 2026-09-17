@@ -85,7 +85,7 @@ export function StaffAccessManager({ staffMembers }: StaffAccessManagerProps) {
           </label>
           <button disabled={!email.trim() || status === "saving"} type="submit">
             {status === "saving" ? <LoaderCircle aria-hidden="true" className="spin" size={18} /> : <UserPlus aria-hidden="true" size={18} />}
-            {status === "saving" ? "Adding staff…" : "Add staff member"}
+            {status === "saving" ? "Adding…" : "Add staff"}
           </button>
           {status !== "idle" && (
             <p className={`staff-form-message ${status === "error" ? "status-error" : "status-success"}`} role={status === "error" ? "alert" : "status"}>
