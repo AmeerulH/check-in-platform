@@ -28,10 +28,12 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
   const shareDialogRef = useRef<HTMLDialogElement>(null);
   const router = useRouter();
   const [action, setAction] = useState<"share" | "delete" | null>(null);
+  const [isPreparingShare, setIsPreparingShare] = useState(false);
   const [message, setMessage] = useState("");
   const [confirmingShare, setConfirmingShare] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [passUrl, setPassUrl] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [shareMessage, setShareMessage] = useState("");
 
   async function createReplacementPass() {
@@ -50,6 +52,7 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
       }
 
       setPassUrl(body.data.passUrl);
+      setQrDataUrl(body.data.qrDataUrl);
       window.setTimeout(() => shareDialogRef.current?.showModal(), 0);
       router.refresh();
     } catch {
@@ -66,13 +69,42 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
     : "";
 
   async function sharePass() {
-    if (!passUrl || !navigator.share) return;
+    if (!qrDataUrl || !navigator.share) return;
 
     try {
-      await navigator.share({ title: subject, text: emailBody, url: passUrl });
+      setIsPreparingShare(true);
+      const qrFile = await createQrFile();
+      if (!qrFile || !navigator.canShare?.({ files: [qrFile] })) {
+        setShareMessage("This browser cannot attach files to the share sheet. Download the PNG, then attach it in your mail app.");
+        return;
+      }
+      await navigator.share({
+        title: subject,
+        text: `Hello ${guestName},\n\nYour GTP 2026 QR pass is attached. Please keep it available on your phone and present it at registration.`,
+        files: [qrFile],
+      });
     } catch {
       // Closing a native share sheet is an expected cancellation.
+    } finally {
+      setIsPreparingShare(false);
     }
+  }
+
+  async function createQrFile() {
+    if (!qrDataUrl) return null;
+    const blob = await fetch(qrDataUrl).then((response) => response.blob());
+    return new File([blob], `GTP-2026-QR-pass-${guestName.replaceAll(/\W+/g, "-").toLowerCase()}.png`, {
+      type: "image/png",
+    });
+  }
+
+  function downloadQrFile() {
+    if (!qrDataUrl) return;
+    const link = document.createElement("a");
+    link.href = qrDataUrl;
+    link.download = `GTP-2026-QR-pass-${guestName.replaceAll(/\W+/g, "-").toLowerCase()}.png`;
+    link.click();
+    setShareMessage("QR PNG downloaded. Attach it to your email before sending.");
   }
 
   async function copyPassLink() {
@@ -168,6 +200,7 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
         className="guest-share-dialog"
         onClose={() => {
           setPassUrl(null);
+          setQrDataUrl(null);
           setShareMessage("");
         }}
         ref={shareDialogRef}
@@ -186,17 +219,20 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
           <p>The prior QR pass is no longer valid.</p>
             <div className="guest-share-options">
               {typeof navigator !== "undefined" && "share" in navigator && (
-                <button onClick={sharePass} type="button">Share</button>
+                <button disabled={isPreparingShare} onClick={() => void sharePass()} type="button">
+                  {isPreparingShare ? "Preparing QR…" : "Share QR file"}
+                </button>
               )}
+              <button onClick={downloadQrFile} type="button">Download PNG</button>
               <a
                 href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(guestEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`}
                 rel="noreferrer"
                 target="_blank"
               >
-                Gmail
+                Gmail link
               </a>
               <a href={`mailto:${encodeURIComponent(guestEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`}>
-                Mail app
+                Mail app link
               </a>
               <button onClick={copyPassLink} type="button">Copy link</button>
             </div>

@@ -1311,6 +1311,11 @@ tbody tr:last-child td {
   color: var(--accent);
 }
 
+.guest-share-options button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .guest-share-close {
   position: absolute;
   top: -0.25rem;
