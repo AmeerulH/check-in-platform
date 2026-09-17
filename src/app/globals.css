@@ -849,12 +849,15 @@ tbody tr:last-child td {
   gap: 0.5rem;
   font-size: 0.875rem;
   font-weight: 650;
+  line-height: 1.25rem;
 }
 
 .staff-form input,
 .staff-form select {
   width: 100%;
-  min-height: 2.75rem;
+  height: 2.75rem;
+  min-height: 0;
+  align-self: start;
   padding: 0 0.75rem;
   border: 1px solid var(--line);
   border-radius: 0.625rem;
