@@ -966,9 +966,9 @@ All endpoint names are provisional until the dedicated API contract is approved.
 - JSON request and response bodies unless returning CSV or an image.
 - Schema validation on every request.
 - Stable machine-readable error codes.
-- Every non-success response returns `{ error: { code, message, retryable } }`;
-  retry-delayed responses additionally return `retryAfterSeconds` and the
-  `Retry-After` response header.
+- Every non-success response returns `{ error: { code, message, retryable } }`.
+  `retryable` is true only for `429` and `503`. Retry-delayed responses also
+  return `retryAfterSeconds` and the `Retry-After` response header.
 - The UI displays the safe message and reference code, while server logs retain
   the provider error code without logging secrets or personal data.
 - Generic authentication responses that avoid email enumeration.
@@ -1095,6 +1095,10 @@ flowchart LR
 - `DEV_PREVIEW_MODE=true` may expose mock interface data without staff login
   only when `NODE_ENV=development`; it is server-only and must remain disabled
   in preview and production environments.
+- `CHECK_IN_TEST_MODE` defaults to enabled so staff can scan before 12 October.
+  Set `CHECK_IN_TEST_MODE=false` before the conference. Outside-hours scans are
+  recorded against 12 October. Retryable API errors are limited to `429` and
+  `503`; closed-window and invalid-pass errors are shown immediately.
 
 #### Preview
 

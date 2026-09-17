@@ -3,6 +3,7 @@ import { z } from "zod";
 import { apiError, apiSuccess } from "@/lib/api/response";
 import { requireApiStaff } from "@/lib/auth/api";
 import { digestCredentialToken } from "@/lib/credentials";
+import { isCheckInTestMode } from "@/lib/env/server";
 import { getPublicEnv } from "@/lib/env/public";
 import { EVENT_ID } from "@/lib/event";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -33,7 +34,7 @@ function parsePassPayload(payload: string) {
   try {
     const appUrl = new URL(getPublicEnv().NEXT_PUBLIC_APP_URL);
     const scannedUrl = new URL(payload);
-    if (scannedUrl.origin !== appUrl.origin) return null;
+    if (scannedUrl.origin !== appUrl.origin && !isCheckInTestMode()) return null;
 
     const match = scannedUrl.pathname.match(/^\/pass\/([^/]+)$/);
     return passPathSchema.safeParse({
@@ -79,6 +80,7 @@ export async function POST(request: Request) {
       p_token_digest: digestCredentialToken(pass.token),
       p_client_scan_id: parsed.data.clientScanId,
       p_captured_at: parsed.data.capturedAt ?? null,
+      p_allow_outside_hours: isCheckInTestMode(),
     })
     .single();
   const result = data as CheckInResult | null;

@@ -45,7 +45,7 @@ export function apiError({
       error: {
         code,
         message,
-        retryable: status !== 400,
+        retryable: status === 429 || status === 503,
         retryAfterSeconds,
       },
     },
