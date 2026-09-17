@@ -821,7 +821,8 @@ h1 {
 
 .activity-list div:not(.activity-mark),
 .delivery-list div,
-table td:first-child {
+.guest-table-cell,
+.attendance-guest-cell {
   display: grid;
   gap: 0.2rem;
 }

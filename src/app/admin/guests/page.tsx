@@ -55,8 +55,10 @@ export default async function GuestsPage() {
                 {guests?.map((guest) => (
                     <tr key={guest.id}>
                       <td>
-                        <strong>{guest.display_name}</strong>
-                        <span>{guest.normalized_email}</span>
+                        <div className="guest-table-cell">
+                          <strong>{guest.display_name}</strong>
+                          <span>{guest.normalized_email}</span>
+                        </div>
                       </td>
                       <td>{guest.organization ?? "—"}</td>
                       <td>{guest.category ?? "—"}</td>

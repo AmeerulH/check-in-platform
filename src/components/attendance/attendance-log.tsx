@@ -152,8 +152,10 @@ export function AttendanceLog({ eventDays, initialPage }: AttendanceLogProps) {
             {!attendanceQuery.isLoading && items.map((item) => (
               <tr key={item.id}>
                 <td>
-                  <strong>{item.guestName}</strong>
-                  <span>{item.guestEmail}</span>
+                  <div className="attendance-guest-cell">
+                    <strong>{item.guestName}</strong>
+                    <span>{item.guestEmail}</span>
+                  </div>
                 </td>
                 <td>{formatDate(item.eventDate)}</td>
                 <td>{formatTime(item.receivedAt)}</td>
