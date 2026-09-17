@@ -21,13 +21,13 @@ const passPathSchema = z.object({
 });
 
 type CheckInResult = {
-  guest_id: string;
-  guest_name: string;
-  event_day_date: string;
-  outcome: "valid_first" | "valid_repeat";
-  scan_count: number;
-  received_at: string;
-  already_processed: boolean;
+  out_guest_id: string;
+  out_guest_name: string;
+  out_event_day_date: string;
+  out_outcome: "valid_first" | "valid_repeat";
+  out_scan_count: number;
+  out_received_at: string;
+  out_already_processed: boolean;
 };
 
 function parsePassPayload(payload: string) {
@@ -121,5 +121,15 @@ export async function POST(request: Request) {
     });
   }
 
-  return apiSuccess({ data: result });
+  return apiSuccess({
+    data: {
+      guest_id: result.out_guest_id,
+      guest_name: result.out_guest_name,
+      event_day_date: result.out_event_day_date,
+      outcome: result.out_outcome,
+      scan_count: result.out_scan_count,
+      received_at: result.out_received_at,
+      already_processed: result.out_already_processed,
+    },
+  });
 }
