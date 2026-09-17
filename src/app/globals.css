@@ -274,6 +274,8 @@ h1 {
 .staff-form select:focus-visible,
 .staff-form button:focus-visible,
 .guest-action-button:focus-visible,
+.guest-download-button:focus-visible,
+.guest-regenerate-button:focus-visible,
 .guest-delete-button:focus-visible,
 .delete-confirmation button:focus-visible,
 .text-link:focus-visible {
@@ -1181,6 +1183,8 @@ tbody tr:last-child td {
 }
 
 .guest-action-button,
+.guest-download-button,
+.guest-regenerate-button,
 .guest-delete-button,
 .delete-confirmation button {
   display: inline-flex;
@@ -1207,9 +1211,29 @@ tbody tr:last-child td {
   color: #9c241c;
 }
 
+.guest-regenerate-button {
+  width: 2.25rem;
+  color: var(--muted);
+}
+
+.guest-download-button {
+  width: 2.25rem;
+  color: var(--accent);
+}
+
 .guest-action-button:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.guest-regenerate-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.guest-download-button:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
 }
 
 .guest-delete-button:hover,
@@ -1219,6 +1243,8 @@ tbody tr:last-child td {
 }
 
 .guest-action-button:disabled,
+.guest-download-button:disabled,
+.guest-regenerate-button:disabled,
 .guest-delete-button:disabled,
 .delete-confirmation button:disabled {
   cursor: wait;
@@ -1239,6 +1265,37 @@ tbody tr:last-child td {
   padding: 0.25rem 0.45rem;
 }
 
+.pass-replacement-confirmation {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pass-replacement-confirmation button {
+  min-height: 1.875rem;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--foreground);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pass-replacement-confirmation button:first-of-type:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pass-replacement-confirmation button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 .guest-action-message {
   position: absolute;
   z-index: 2;
@@ -1255,26 +1312,26 @@ tbody tr:last-child td {
   line-height: 1.4;
 }
 
-.guest-share-dialog {
-  width: min(calc(100% - 2rem), 24rem);
-  padding: 1.25rem;
+.guest-share-popover {
+  position: fixed;
+  inset: unset;
+  width: min(25rem, calc(100vw - 2rem));
+  margin: 0;
+  padding: 1rem;
   border: 1px solid var(--line);
   border-radius: 0.875rem;
   background: var(--surface);
   color: var(--foreground);
+  box-shadow: 0 0.875rem 2.5rem rgba(16, 35, 29, 0.16);
 }
 
-.guest-share-dialog::backdrop {
-  background: rgba(16, 35, 29, 0.3);
-}
-
-.guest-share-dialog > div {
+.guest-share-popover > div {
   position: relative;
   display: grid;
   gap: 0.35rem;
 }
 
-.guest-share-dialog p {
+.guest-share-popover p {
   margin: 0;
   color: var(--muted);
   font-size: 0.75rem;
@@ -1291,7 +1348,11 @@ tbody tr:last-child td {
 .guest-share-options a,
 .guest-share-options button,
 .guest-share-close {
+  display: inline-flex;
   min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   padding: 0.35rem 0.5rem;
   border: 1px solid var(--line);
   border-radius: 0.45rem;
@@ -1301,6 +1362,7 @@ tbody tr:last-child td {
   font-size: 0.75rem;
   font-weight: 650;
   text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -1329,6 +1391,10 @@ tbody tr:last-child td {
 .guest-share-message {
   margin-top: 0.35rem !important;
   color: #075d40 !important;
+}
+
+.guest-share-note {
+  margin-top: 0.25rem !important;
 }
 
 .spin {

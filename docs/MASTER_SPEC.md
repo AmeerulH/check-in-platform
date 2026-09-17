@@ -41,7 +41,7 @@ The platform is operationally and technically separate from the existing SCPH we
 | Repeat scans | Allowed and retained |
 | Daily attendance | One attendance summary per guest per event day |
 | Live updates | Supabase Realtime with authoritative refetch |
-| Guest pass sharing | Staff-controlled native share sheet, Gmail compose link, default mail app or copied pass link |
+| Guest pass sharing | Staff-controlled native share sheet or downloaded QR PNG attachment |
 | Expected scale | Up to 500 guests and five simultaneous scanners |
 | Connectivity | Normally online with a short offline retry queue |
 | Event dates | 12, 13, 14 and 15 October 2026 |
@@ -319,9 +319,10 @@ to users.
 - **QR generation/reissue:** Disable repeated generation while processing.
   Confirm the active credential version only after it is stored. Explain
   revoked, unavailable and failed-generation states without exposing tokens.
-- **Pass sharing:** Clearly distinguish a pass that is ready to share from one
-  that could not be generated. Delivery itself occurs in the organizer’s
-  selected app and is not observable by the platform. Each explicit replacement
+- **Pass sharing:** Clearly distinguish the current QR file from a new
+  replacement. Normal sharing retrieves the stored current QR PNG and does not
+  rotate the credential. Delivery occurs in the organizer’s selected app and
+  is not observable by the platform. Only an explicitly confirmed replacement
   rotates the credential.
 - **QR scanning:** Immediately show server-confirmed first scan, repeat scan,
   invalid pass, revoked pass, inactive guest, out-of-hours and network-pending
@@ -684,6 +685,13 @@ The QR image is a transport representation only. Security comes from the opaque 
 - Only a keyed digest or secure hash is stored in the database.
 - Credentials are revocable and replaceable.
 - Reissuing a credential immediately invalidates the previous one.
+- Each issued credential also has a QR PNG and its private pass URL stored in
+  the private `guest-passes` Supabase Storage bucket. The application
+  retrieves them only through authorized organizer endpoints; no public
+  Storage URLs are used.
+- Reissuing a credential removes the previous QR file after the new file is
+  safely stored. Credentials created before file storage was enabled require
+  one final reissue before they can be reshared.
 
 ### 11.2 Pass URL
 
@@ -716,11 +724,8 @@ It must not display attendance history, staff information or administrative meta
 ### 12.1 Supported version 1 sharing channels
 
 - Native browser share sheet (mobile)
-- Prefilled Gmail compose link
-- Prefilled default mail app
-- Copyable private pass link
 - QR image download
-- Printable pass
+- Manual attachment in the organizer’s email or messaging app
 
 ### 12.2 Staff-controlled sharing flow
 
@@ -728,23 +733,30 @@ It must not display attendance history, staff information or administrative meta
 sequenceDiagram
   participant Organizer
   participant NextApp
-  participant Database
-  participant MailApp
+  participant Storage
+  participant ShareApp
   participant Guest
 
-  Organizer->>NextApp: Create replacement pass
-  NextApp->>Database: Revoke current pass and issue new pass
-  NextApp-->>Organizer: Present sharing options
-  Organizer->>MailApp: Choose share, Gmail, mail app or copy link
-  MailApp-->>Guest: Deliver private pass link
+  Organizer->>NextApp: Share QR
+  NextApp->>Storage: Retrieve current private PNG
+  Storage-->>NextApp: Existing QR PNG
+  NextApp-->>Organizer: Present share and download options
+  Organizer->>ShareApp: Share or attach the QR PNG
+  ShareApp-->>Guest: Deliver QR PNG
 ```
 
 ### 12.3 Sharing requirements
 
+- Normal sharing must reuse the stored active QR PNG and never rotate the credential.
 - The platform creates a new pass only when an organizer explicitly confirms replacement.
-- The organizer chooses a browser-native share target, Gmail, their configured mail app, or copies the private pass link.
+- The organizer chooses a browser-native share target, prefilled Gmail/default
+  mail compose option, or downloads the PNG to attach in an email or messaging app.
+- Email compose options include the private pass link and prefill the guest
+  recipient. The organizer attaches the PNG manually, because browser compose
+  links cannot attach local files.
 - The platform cannot observe delivery, bounces or provider-side failures because the organizer’s mail app sends the message.
-- Creating a replacement pass revokes the prior pass. This is required because opaque QR secrets are not stored in recoverable form.
+- Creating a replacement pass revokes the prior pass and removes its stored QR file.
+- Pass files are private Storage objects and can only be streamed through an authorized organizer endpoint.
 - Supabase Auth email remains reserved for staff authentication.
 - QR secrets and guest PII must be redacted from application logs.
 
@@ -939,6 +951,8 @@ All endpoint names are provisional until the dedicated API contract is approved.
 | `POST /api/guests/import/preview` | Organizer | Validate CSV |
 | `POST /api/guests/import/commit` | Organizer | Commit accepted rows |
 | `POST /api/guests/[id]/credential` | Organizer | Issue a replacement QR for staff sharing |
+| `GET /api/guests/[id]/pass-file` | Organizer | Retrieve the stored current QR PNG |
+| `GET /api/guests/[id]/pass-link` | Organizer | Retrieve the stored private pass link |
 | `DELETE /api/guests/[id]` | Organizer | Delete an unscanned guest |
 | `POST /api/check-in` | Organizer or scanner | Record scan |
 | `GET /api/attendance` | Organizer, scanner or viewer | Read paginated attendance history |

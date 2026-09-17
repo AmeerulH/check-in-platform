@@ -21,14 +21,20 @@ export function createPassUrl(publicId: string, token: string) {
   return `${getPublicEnv().NEXT_PUBLIC_APP_URL}/pass/${publicId}#${token}`;
 }
 
+const qrOptions = {
+  errorCorrectionLevel: "M" as const,
+  margin: 4,
+  width: 600,
+  color: {
+    dark: "#10231d",
+    light: "#ffffff",
+  },
+};
+
 export function createPassQrDataUrl(passUrl: string) {
-  return QRCode.toDataURL(passUrl, {
-    errorCorrectionLevel: "M",
-    margin: 4,
-    width: 600,
-    color: {
-      dark: "#10231d",
-      light: "#ffffff",
-    },
-  });
+  return QRCode.toDataURL(passUrl, qrOptions);
+}
+
+export function createPassQrPng(passUrl: string) {
+  return QRCode.toBuffer(passUrl, qrOptions);
 }

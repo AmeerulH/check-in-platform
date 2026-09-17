@@ -5,6 +5,7 @@ import { requireApiStaff } from "@/lib/auth/api";
 import {
   createCredentialToken,
   createPassQrDataUrl,
+  createPassQrPng,
   createPassUrl,
   digestCredentialToken,
 } from "@/lib/credentials";
@@ -51,6 +52,13 @@ export async function POST(
     });
   }
 
+  const { data: priorCredential } = await admin
+    .from("guest_credentials")
+    .select("storage_path")
+    .eq("guest_id", guest.id)
+    .is("revoked_at", null)
+    .maybeSingle();
+
   const token = createCredentialToken();
   const { data: credentialResult, error: credentialError } = await admin.rpc(
     "issue_guest_credential",
@@ -73,6 +81,81 @@ export async function POST(
   }
 
   const passUrl = createPassUrl(credential.public_id, token);
+  const storagePath = `${EVENT_ID}/${guest.id}/${credential.credential_id}.png`;
+  const passLinkPath = `${storagePath}.txt`;
+  const { error: uploadError } = await admin.storage
+    .from("guest-passes")
+    .upload(storagePath, await createPassQrPng(passUrl), {
+      contentType: "image/png",
+      upsert: false,
+    });
+
+  if (uploadError) {
+    await admin
+      .from("guest_credentials")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("id", credential.credential_id);
+    console.error("Unable to store guest pass file.", { message: uploadError.message });
+    return apiError({
+      code: "CREDENTIAL_FILE_STORE_FAILED",
+      message:
+        "We could not securely store the QR pass. Please generate a replacement pass.",
+      status: 503,
+    });
+  }
+
+  const { error: linkUploadError } = await admin.storage
+    .from("guest-passes")
+    .upload(passLinkPath, Buffer.from(passUrl, "utf8"), {
+      contentType: "text/plain",
+      upsert: false,
+    });
+
+  if (linkUploadError) {
+    await admin.storage.from("guest-passes").remove([storagePath]);
+    await admin
+      .from("guest_credentials")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("id", credential.credential_id);
+    console.error("Unable to store guest pass link.", { message: linkUploadError.message });
+    return apiError({
+      code: "CREDENTIAL_FILE_STORE_FAILED",
+      message: "We could not securely store the QR pass. Please generate a replacement pass.",
+      status: 503,
+    });
+  }
+
+  const { error: storagePathError } = await admin
+    .from("guest_credentials")
+    .update({ storage_path: storagePath })
+    .eq("id", credential.credential_id);
+
+  if (storagePathError) {
+    await admin.storage.from("guest-passes").remove([storagePath, passLinkPath]);
+    await admin
+      .from("guest_credentials")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("id", credential.credential_id);
+    console.error("Unable to link guest pass file.", { code: storagePathError.code });
+    return apiError({
+      code: "CREDENTIAL_FILE_STORE_FAILED",
+      message:
+        "We could not securely store the QR pass. Please generate a replacement pass.",
+      status: 503,
+    });
+  }
+
+  if (priorCredential?.storage_path) {
+    const { error: removalError } = await admin.storage
+      .from("guest-passes")
+      .remove([priorCredential.storage_path, `${priorCredential.storage_path}.txt`]);
+    if (removalError) {
+      console.error("Unable to remove replaced guest pass file.", {
+        message: removalError.message,
+      });
+    }
+  }
+
   const qrDataUrl = await createPassQrDataUrl(passUrl);
 
   await admin.from("audit_events").insert({
