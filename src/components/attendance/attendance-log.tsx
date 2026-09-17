@@ -1,7 +1,8 @@
 "use client";
 
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 import type { AttendanceLogItem, AttendanceLogPage } from "@/lib/attendance";
 import { EVENT_TIMEZONE } from "@/lib/event";
@@ -15,6 +16,28 @@ type AttendanceResponse = {
   data?: AttendanceLogPage;
   error?: { message?: string };
 };
+
+async function fetchAttendancePage({
+  date,
+  offset,
+  search,
+}: {
+  date: string;
+  offset: number;
+  search: string;
+}) {
+  const params = new URLSearchParams({ offset: String(offset) });
+  if (date) params.set("date", date);
+  if (search) params.set("search", search);
+  const response = await fetch(`/api/attendance?${params}`);
+  const body = (await response.json()) as AttendanceResponse;
+
+  if (!response.ok || !body.data) {
+    throw new Error(body.error?.message ?? "We could not load check-ins.");
+  }
+
+  return body.data;
+}
 
 function formatTime(value: string) {
   return new Intl.DateTimeFormat("en-MY", {
@@ -36,68 +59,45 @@ export function AttendanceLog({ eventDays, initialPage }: AttendanceLogProps) {
   const scrollRootRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [date, setDate] = useState("");
-  const [items, setItems] = useState<AttendanceLogItem[]>(initialPage.items);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [nextOffset, setNextOffset] = useState(initialPage.nextOffset);
   const [search, setSearch] = useState("");
   const [submittedSearch, setSubmittedSearch] = useState("");
-
-  const loadPage = useCallback(async (
-    reset = false,
-    filters?: { date: string; search: string },
-  ) => {
-    const offset = reset ? 0 : nextOffset;
-    if (offset === null || loading) return;
-
-    setLoading(true);
-    setMessage("");
-    try {
-      const params = new URLSearchParams({ offset: String(offset) });
-      const filterDate = filters?.date ?? date;
-      const filterSearch = filters?.search ?? submittedSearch;
-      if (filterDate) params.set("date", filterDate);
-      if (filterSearch) params.set("search", filterSearch);
-      const response = await fetch(`/api/attendance?${params}`);
-      const body = (await response.json()) as AttendanceResponse;
-
-      if (!response.ok || !body.data) {
-        setMessage(body.error?.message ?? "We could not load more check-ins.");
-        return;
-      }
-
-      setItems((currentItems) =>
-        reset ? body.data!.items : [...currentItems, ...body.data!.items],
-      );
-      setNextOffset(body.data.nextOffset);
-    } catch {
-      setMessage("We could not load more check-ins. Check your connection and try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, [date, loading, nextOffset, submittedSearch]);
+  const isDefaultFilter = !date && !submittedSearch;
+  const attendanceQuery = useInfiniteQuery({
+    queryKey: ["attendance-log", { date, search: submittedSearch }],
+    queryFn: ({ pageParam }) =>
+      fetchAttendancePage({ date, search: submittedSearch, offset: pageParam }),
+    initialPageParam: 0,
+    initialData: isDefaultFilter
+      ? { pages: [initialPage], pageParams: [0] }
+      : undefined,
+    getNextPageParam: (page) => page.nextOffset ?? undefined,
+  });
+  const items = attendanceQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
   useEffect(() => {
     const root = scrollRootRef.current;
     const sentinel = sentinelRef.current;
-    if (!root || !sentinel || nextOffset === null) return;
+    if (!root || !sentinel || !attendanceQuery.hasNextPage) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) void loadPage();
+        if (entries[0]?.isIntersecting && !attendanceQuery.isFetchingNextPage) {
+          void attendanceQuery.fetchNextPage();
+        }
       },
       { root, rootMargin: "180px" },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [loadPage, nextOffset]);
+  }, [
+    attendanceQuery.fetchNextPage,
+    attendanceQuery.hasNextPage,
+    attendanceQuery.isFetchingNextPage,
+  ]);
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const nextSearch = search.trim();
-    setSubmittedSearch(nextSearch);
-    setNextOffset(0);
-    void loadPage(true, { date, search: nextSearch });
+    setSubmittedSearch(search.trim());
   }
 
   return (
@@ -163,9 +163,13 @@ export function AttendanceLog({ eventDays, initialPage }: AttendanceLogProps) {
           </tbody>
         </table>
         <div aria-live="polite" className="attendance-load-state" ref={sentinelRef}>
-          {loading && "Loading more check-ins…"}
-          {!loading && nextOffset !== null && items.length > 0 && "Scroll for more"}
-          {message}
+          {attendanceQuery.isFetchingNextPage && "Loading more check-ins…"}
+          {!attendanceQuery.isFetchingNextPage && attendanceQuery.hasNextPage && items.length > 0 && "Scroll for more"}
+          {attendanceQuery.isError && (
+            <button onClick={() => void attendanceQuery.refetch()} type="button">
+              {attendanceQuery.error.message} Retry
+            </button>
+          )}
         </div>
       </div>
     </section>
