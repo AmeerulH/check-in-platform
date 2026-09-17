@@ -50,6 +50,11 @@ export function GuestPass({ publicId }: { publicId: string }) {
         <section className="pass-card" aria-live="polite">
           <p className="eyebrow">GTP 2026 guest pass</p>
           <h1>Loading your pass</h1>
+          <div aria-hidden="true" className="pass-skeleton">
+            <span className="skeleton" />
+            <span className="skeleton" />
+            <span className="skeleton pass-skeleton-qr" />
+          </div>
           <p className="lede">Please keep this page open while we verify your secure pass.</p>
         </section>
       </main>

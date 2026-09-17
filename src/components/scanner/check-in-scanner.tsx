@@ -1,7 +1,7 @@
 "use client";
 
 import { BrowserQRCodeReader } from "@zxing/browser";
-import { Camera, Keyboard, RefreshCw, SquareStop } from "lucide-react";
+import { Camera, Keyboard, LoaderCircle, RefreshCw, SquareStop } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 import {
@@ -46,6 +46,7 @@ export function CheckInScanner() {
   const retryPendingScansRef = useRef<() => Promise<void>>(async () => {});
   const [manualPass, setManualPass] = useState("");
   const [result, setResult] = useState<CheckInResponse["data"]>();
+  const [isRetrying, setIsRetrying] = useState(false);
   const [message, setMessage] = useState("Start the camera, then hold a GTP QR pass inside the frame.");
   const [pendingCount, setPendingCount] = useState(0);
   const [status, setStatus] = useState<ScannerStatus>("idle");
@@ -164,8 +165,13 @@ export function CheckInScanner() {
     const scans = await getPendingScans();
     if (!scans.length) return;
 
-    for (const scan of scans) {
-      await submitPass(scan.payload, scan);
+    setIsRetrying(true);
+    try {
+      for (const scan of scans) {
+        await submitPass(scan.payload, scan);
+      }
+    } finally {
+      setIsRetrying(false);
     }
   }
 
@@ -220,15 +226,20 @@ export function CheckInScanner() {
             Stop camera
           </button>
         ) : (
-          <button className="button button-primary" onClick={() => void startCamera()} type="button">
-            <Camera aria-hidden="true" size={18} />
-            Start camera
+          <button
+            className="button button-primary"
+            disabled={status === "requesting" || status === "submitting"}
+            onClick={() => void startCamera()}
+            type="button"
+          >
+            {status === "requesting" ? <LoaderCircle aria-hidden="true" className="spin" size={18} /> : <Camera aria-hidden="true" size={18} />}
+            {status === "requesting" ? "Opening camera…" : "Start camera"}
           </button>
         )}
         {pendingCount > 0 && (
-          <button className="button button-secondary" onClick={() => void retryPendingScans()} type="button">
-            <RefreshCw aria-hidden="true" size={18} />
-            Retry {pendingCount} pending {pendingCount === 1 ? "scan" : "scans"}
+          <button className="button button-secondary" disabled={isRetrying || status === "submitting"} onClick={() => void retryPendingScans()} type="button">
+            {isRetrying ? <LoaderCircle aria-hidden="true" className="spin" size={18} /> : <RefreshCw aria-hidden="true" size={18} />}
+            {isRetrying ? "Retrying scans…" : `Retry ${pendingCount} pending ${pendingCount === 1 ? "scan" : "scans"}`}
           </button>
         )}
         <form className="manual-pass-form" onSubmit={submitManualPass}>
@@ -244,7 +255,7 @@ export function CheckInScanner() {
             value={manualPass}
           />
           <button disabled={!manualPass.trim() || status === "submitting"} type="submit">
-            Check in pass
+            {status === "submitting" ? "Confirming pass…" : "Check in pass"}
           </button>
         </form>
       </aside>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { LoaderCircle, Search } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 import type { AttendanceLogItem, AttendanceLogPage } from "@/lib/attendance";
@@ -73,6 +73,7 @@ export function AttendanceLog({ eventDays, initialPage }: AttendanceLogProps) {
     getNextPageParam: (page) => page.nextOffset ?? undefined,
   });
   const items = attendanceQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const isFiltering = attendanceQuery.isLoading && !isDefaultFilter;
 
   useEffect(() => {
     const root = scrollRootRef.current;
@@ -122,7 +123,10 @@ export function AttendanceLog({ eventDays, initialPage }: AttendanceLogProps) {
             ))}
           </select>
         </label>
-        <button type="submit">Apply filters</button>
+        <button disabled={isFiltering} type="submit">
+          {isFiltering && <LoaderCircle aria-hidden="true" className="spin" size={16} />}
+          {isFiltering ? "Filtering…" : "Apply filters"}
+        </button>
       </form>
       <div className="attendance-table-scroll" ref={scrollRootRef}>
         <table className="attendance-table">
@@ -135,7 +139,17 @@ export function AttendanceLog({ eventDays, initialPage }: AttendanceLogProps) {
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {attendanceQuery.isLoading && (
+              Array.from({ length: 6 }, (_, index) => (
+                <tr className="table-skeleton-row" key={index}>
+                  <td><span className="skeleton" /></td>
+                  <td><span className="skeleton" /></td>
+                  <td><span className="skeleton" /></td>
+                  <td><span className="skeleton" /></td>
+                </tr>
+              ))
+            )}
+            {!attendanceQuery.isLoading && items.map((item) => (
               <tr key={item.id}>
                 <td>
                   <strong>{item.guestName}</strong>
@@ -150,7 +164,7 @@ export function AttendanceLog({ eventDays, initialPage }: AttendanceLogProps) {
                 </td>
               </tr>
             ))}
-            {!items.length && (
+            {!attendanceQuery.isLoading && !items.length && (
               <tr>
                 <td colSpan={4}>
                   <div className="empty-state">
@@ -166,8 +180,8 @@ export function AttendanceLog({ eventDays, initialPage }: AttendanceLogProps) {
           {attendanceQuery.isFetchingNextPage && "Loading more check-ins…"}
           {!attendanceQuery.isFetchingNextPage && attendanceQuery.hasNextPage && items.length > 0 && "Scroll for more"}
           {attendanceQuery.isError && (
-            <button onClick={() => void attendanceQuery.refetch()} type="button">
-              {attendanceQuery.error.message} Retry
+            <button disabled={attendanceQuery.isRefetching} onClick={() => void attendanceQuery.refetch()} type="button">
+              {attendanceQuery.isRefetching ? "Retrying…" : `${attendanceQuery.error.message} Retry`}
             </button>
           )}
         </div>
