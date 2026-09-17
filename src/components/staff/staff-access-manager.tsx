@@ -141,7 +141,7 @@ export function StaffAccessManager({
           </div>
         </div>
         <div className="table-wrap">
-          <table>
+          <table className="staff-access-table">
             <thead>
               <tr>
                 <th>Email</th>
@@ -153,8 +153,8 @@ export function StaffAccessManager({
             <tbody>
               {staffMembers.map((staffMember) => (
                 <tr key={staffMember.id}>
-                  <td>{staffMember.normalized_email}</td>
-                  <td>
+                  <td data-label="Email">{staffMember.normalized_email}</td>
+                  <td data-label="Role">
                     {staffMember.id === currentStaffMemberId ? (
                       <span className="staff-role">{staffMember.role}</span>
                     ) : (
@@ -173,12 +173,12 @@ export function StaffAccessManager({
                       </select>
                     )}
                   </td>
-                  <td>
+                  <td data-label="Access">
                     <span className={`status-badge ${staffMember.active ? "status-checked_in" : "status-not_arrived"}`}>
                       {staffMember.active ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td>
+                  <td className="staff-save-cell" data-label="Role update">
                     {staffMember.id !== currentStaffMemberId && (
                       <button
                         className="staff-role-save"

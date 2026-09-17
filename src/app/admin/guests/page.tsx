@@ -41,7 +41,7 @@ export default async function GuestsPage() {
             <span className="guest-count">{guests?.length ?? 0} invitees</span>
           </div>
           <div className="table-wrap">
-            <table>
+            <table className="guest-directory-table">
               <thead>
                 <tr>
                   <th>Guest</th>
@@ -54,20 +54,20 @@ export default async function GuestsPage() {
               <tbody>
                 {guests?.map((guest) => (
                     <tr key={guest.id}>
-                      <td>
+                      <td data-label="Guest">
                         <div className="guest-table-cell">
                           <strong>{guest.display_name}</strong>
                           <span>{guest.normalized_email}</span>
                         </div>
                       </td>
-                      <td>{guest.organization ?? "—"}</td>
-                      <td>{guest.category ?? "—"}</td>
-                      <td>
+                      <td data-label="Organization">{guest.organization ?? "—"}</td>
+                      <td data-label="Category">{guest.category ?? "—"}</td>
+                      <td data-label="Today">
                         <span className="status-badge status-not_arrived">
                           {guest.status === "active" ? "Pass not scanned" : "Inactive"}
                         </span>
                       </td>
-                      <td>
+                      <td className="guest-actions-cell" data-label="Pass actions">
                         <GuestActions
                           guestEmail={guest.normalized_email}
                           guestId={guest.id}

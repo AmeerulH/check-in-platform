@@ -151,15 +151,15 @@ export function AttendanceLog({ eventDays, initialPage }: AttendanceLogProps) {
             )}
             {!attendanceQuery.isLoading && items.map((item) => (
               <tr key={item.id}>
-                <td>
+                <td data-label="Guest">
                   <div className="attendance-guest-cell">
                     <strong>{item.guestName}</strong>
                     <span>{item.guestEmail}</span>
                   </div>
                 </td>
-                <td>{formatDate(item.eventDate)}</td>
-                <td>{formatTime(item.receivedAt)}</td>
-                <td>
+                <td data-label="Event day">{formatDate(item.eventDate)}</td>
+                <td data-label="Check-in">{formatTime(item.receivedAt)}</td>
+                <td data-label="Result">
                   <span className={`status-badge status-${item.outcome}`}>
                     {item.outcome === "valid_first" ? "First arrival" : "Repeat scan"}
                   </span>

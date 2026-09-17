@@ -54,6 +54,13 @@ export function AppShell({
         </div>
         <LogoutButton />
       </aside>
+      <header className="mobile-app-header">
+        <Link className="app-brand" href="/dashboard">
+          <span>GTP</span>
+          <strong>Check-in</strong>
+        </Link>
+        <LogoutButton />
+      </header>
       <main className="app-main">{children}</main>
     </div>
   );

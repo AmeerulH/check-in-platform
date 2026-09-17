@@ -2,7 +2,8 @@
 
 import { Download, LoaderCircle, Mail, RefreshCw, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type GuestActionsProps = {
   guestEmail: string;
@@ -43,6 +44,12 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
   const [passUrl, setPassUrl] = useState<string | null>(null);
   const [shareMessage, setShareMessage] = useState("");
   const [sharePopoverPosition, setSharePopoverPosition] = useState<{ left: number; top: number } | null>(null);
+
+  useEffect(() => {
+    if (!message) return;
+    const timeout = window.setTimeout(() => setMessage(""), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [message]);
 
   function showSharePopover() {
     window.requestAnimationFrame(() => {
@@ -286,7 +293,15 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
           </button>
         </span>
       )}
-      {message && <p className="guest-action-message" role="status">{message}</p>}
+      {message && typeof document !== "undefined" && createPortal(
+        <div className="app-snackbar" role="status">
+          <span>{message}</span>
+          <button aria-label="Dismiss notification" onClick={() => setMessage("")} type="button">
+            <X size={16} />
+          </button>
+        </div>,
+        document.body,
+      )}
       <div
         aria-labelledby={`share-pass-${guestId}`}
         className="guest-share-popover"
