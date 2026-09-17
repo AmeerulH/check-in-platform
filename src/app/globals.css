@@ -1255,37 +1255,42 @@ tbody tr:last-child td {
   line-height: 1.4;
 }
 
-.guest-share-panel {
-  position: absolute;
-  z-index: 2;
-  top: calc(100% + 0.5rem);
-  right: 0;
-  display: grid;
-  width: min(22rem, 60vw);
-  gap: 0.35rem;
-  padding: 0.875rem;
+.guest-share-dialog {
+  width: min(calc(100% - 2rem), 24rem);
+  padding: 1.25rem;
   border: 1px solid var(--line);
-  border-radius: 0.625rem;
+  border-radius: 0.875rem;
   background: var(--surface);
-  box-shadow: 0 0.75rem 2rem rgba(16, 35, 29, 0.14);
+  color: var(--foreground);
 }
 
-.guest-share-panel p {
+.guest-share-dialog::backdrop {
+  background: rgba(16, 35, 29, 0.3);
+}
+
+.guest-share-dialog > div {
+  position: relative;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.guest-share-dialog p {
   margin: 0;
   color: var(--muted);
   font-size: 0.75rem;
   line-height: 1.4;
 }
 
-.guest-share-panel > div {
+.guest-share-options {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  margin-top: 0.35rem;
+  margin-top: 0.65rem;
 }
 
-.guest-share-panel a,
-.guest-share-panel button {
+.guest-share-options a,
+.guest-share-options button,
+.guest-share-close {
   min-height: 2rem;
   padding: 0.35rem 0.5rem;
   border: 1px solid var(--line);
@@ -1299,10 +1304,26 @@ tbody tr:last-child td {
   cursor: pointer;
 }
 
-.guest-share-panel a:hover,
-.guest-share-panel button:hover {
+.guest-share-options a:hover,
+.guest-share-options button:hover,
+.guest-share-close:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.guest-share-close {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  display: grid;
+  width: 2rem;
+  padding: 0;
+  place-items: center;
+}
+
+.guest-share-message {
+  margin-top: 0.35rem !important;
+  color: #075d40 !important;
 }
 
 .spin {

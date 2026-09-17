@@ -1,8 +1,8 @@
 "use client";
 
-import { LoaderCircle, Mail, Trash2 } from "lucide-react";
+import { LoaderCircle, Mail, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type GuestActionsProps = {
   guestEmail: string;
@@ -25,12 +25,14 @@ type ErrorResponse = {
 };
 
 export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsProps) {
+  const shareDialogRef = useRef<HTMLDialogElement>(null);
   const router = useRouter();
   const [action, setAction] = useState<"share" | "delete" | null>(null);
   const [message, setMessage] = useState("");
   const [confirmingShare, setConfirmingShare] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [passUrl, setPassUrl] = useState<string | null>(null);
+  const [shareMessage, setShareMessage] = useState("");
 
   async function createReplacementPass() {
     setAction("share");
@@ -48,6 +50,7 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
       }
 
       setPassUrl(body.data.passUrl);
+      window.setTimeout(() => shareDialogRef.current?.showModal(), 0);
       router.refresh();
     } catch {
       setMessage("We could not reach the pass service. Please try again.");
@@ -74,8 +77,12 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
 
   async function copyPassLink() {
     if (!passUrl) return;
-    await navigator.clipboard.writeText(passUrl);
-    setMessage("Pass link copied. You can paste it into any message.");
+    try {
+      await navigator.clipboard.writeText(passUrl);
+      setShareMessage("Pass link copied. You can paste it into any message.");
+    } catch {
+      setShareMessage("We could not copy the pass link. Choose a mail or sharing option instead.");
+    }
   }
 
   async function deleteGuest() {
@@ -156,28 +163,47 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
         </span>
       )}
       {message && <p className="guest-action-message" role="status">{message}</p>}
-      {passUrl && (
-        <div className="guest-share-panel">
-          <strong>Pass ready to share</strong>
-          <p>The prior QR pass is no longer valid.</p>
+      <dialog
+        aria-labelledby={`share-pass-${guestId}`}
+        className="guest-share-dialog"
+        onClose={() => {
+          setPassUrl(null);
+          setShareMessage("");
+        }}
+        ref={shareDialogRef}
+      >
+        {passUrl && (
           <div>
-            {typeof navigator !== "undefined" && "share" in navigator && (
-              <button onClick={sharePass} type="button">Share</button>
-            )}
-            <a
-              href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(guestEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`}
-              rel="noreferrer"
-              target="_blank"
+            <button
+              aria-label="Close sharing options"
+              className="guest-share-close"
+              onClick={() => shareDialogRef.current?.close()}
+              type="button"
             >
-              Gmail
-            </a>
-            <a href={`mailto:${encodeURIComponent(guestEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`}>
-              Mail app
-            </a>
-            <button onClick={copyPassLink} type="button">Copy link</button>
+              <X size={18} />
+            </button>
+            <strong id={`share-pass-${guestId}`}>Pass ready to share</strong>
+          <p>The prior QR pass is no longer valid.</p>
+            <div className="guest-share-options">
+              {typeof navigator !== "undefined" && "share" in navigator && (
+                <button onClick={sharePass} type="button">Share</button>
+              )}
+              <a
+                href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(guestEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Gmail
+              </a>
+              <a href={`mailto:${encodeURIComponent(guestEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`}>
+                Mail app
+              </a>
+              <button onClick={copyPassLink} type="button">Copy link</button>
+            </div>
+            {shareMessage && <p className="guest-share-message" role="status">{shareMessage}</p>}
           </div>
-        </div>
-      )}
+        )}
+      </dialog>
     </div>
   );
 }
