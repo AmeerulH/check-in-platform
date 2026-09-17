@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, QrCode, Send, Users } from "lucide-react";
+import { ClipboardList, LayoutDashboard, QrCode, Users } from "lucide-react";
 
 import type { StaffMember } from "@/lib/auth/staff";
 
@@ -7,7 +7,7 @@ const navigation = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/guests", label: "Guests", icon: Users },
   { href: "/scanner", label: "Scan pass", icon: QrCode },
-  { href: "/admin/delivery", label: "Pass delivery", icon: Send },
+  { href: "/attendance", label: "Check-ins", icon: ClipboardList },
 ];
 
 export function AppShell({

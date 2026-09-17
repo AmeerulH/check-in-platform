@@ -489,6 +489,75 @@ h1 {
   background: var(--surface);
 }
 
+.attendance-workspace {
+  display: flex;
+  height: 100dvh;
+  flex-direction: column;
+}
+
+.attendance-workspace .workspace-heading {
+  flex: 0 0 auto;
+  margin-bottom: 1.5rem;
+}
+
+.attendance-panel {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.attendance-filters {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.attendance-date-filter select,
+.attendance-filters button {
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.attendance-filters button {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.attendance-table-scroll {
+  min-height: 0;
+  overflow: auto;
+}
+
+.attendance-table {
+  min-width: 42rem;
+}
+
+.attendance-load-state {
+  min-height: 3rem;
+  padding: 0.75rem 1.25rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
 .panel-heading,
 .directory-toolbar {
   display: flex;
@@ -1178,6 +1247,15 @@ tbody tr:last-child td {
   .workspace-heading-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .attendance-workspace {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .attendance-panel {
+    min-height: 34rem;
   }
 
   .guest-form {

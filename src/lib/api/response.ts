@@ -15,7 +15,9 @@ export type ApiErrorCode =
   | "PASS_INVALID_OR_REVOKED"
   | "SCAN_INVALID_INPUT"
   | "SCAN_EVENT_NOT_ACTIVE"
-  | "SCAN_RECORD_FAILED";
+  | "SCAN_RECORD_FAILED"
+  | "ATTENDANCE_INVALID_FILTER"
+  | "ATTENDANCE_UNAVAILABLE";
 
 type ApiErrorOptions = {
   code: ApiErrorCode;

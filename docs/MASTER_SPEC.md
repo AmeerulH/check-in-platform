@@ -236,7 +236,7 @@ flowchart TD
   OrganizerArea --> GuestManagement[GuestManagement]
   OrganizerArea --> CsvImport[CSVImport]
   OrganizerArea --> StaffManagement[StaffAllowlist]
-  OrganizerArea --> PassDelivery[PassDelivery]
+  OrganizerArea --> PassSharing[PassSharing]
   OrganizerArea --> AuditHistory[AuditHistory]
 
   ScannerArea --> CameraScanner[CameraScanner]
@@ -259,7 +259,7 @@ flowchart TD
 | `/admin/guests` | Organizer | Manage invitees |
 | `/admin/imports` | Organizer | Preview and commit CSV imports |
 | `/admin/staff` | Organizer | Manage allowed staff emails and roles |
-| `/admin/delivery` | Organizer | Send and track guest passes |
+| `/attendance` | Organizer, scanner or viewer | Search and review the full check-in history |
 | `/admin/audit` | Organizer | Review administrative history |
 | `/scanner` | Organizer or scanner | Scan and check in guests |
 | `/dashboard` | Organizer or viewer | Monitor attendance |
@@ -941,7 +941,7 @@ All endpoint names are provisional until the dedicated API contract is approved.
 | `POST /api/guests/[id]/credential` | Organizer | Issue a replacement QR for staff sharing |
 | `DELETE /api/guests/[id]` | Organizer | Delete an unscanned guest |
 | `POST /api/check-in` | Organizer or scanner | Record scan |
-| `GET /api/attendance` | Organizer or viewer | Read dashboard data |
+| `GET /api/attendance` | Organizer, scanner or viewer | Read paginated attendance history |
 | `GET /api/attendance/export` | Organizer | Export attendance |
 | `GET /api/staff` | Organizer | List allowed staff |
 | `POST /api/staff` | Organizer | Add staff membership |
