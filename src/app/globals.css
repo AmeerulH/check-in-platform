@@ -583,6 +583,23 @@ h1 {
   min-width: 0;
 }
 
+@media (min-width: 48.0625rem) {
+  .app-shell {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .app-sidebar {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-main {
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
 .workspace {
   width: min(100%, 78rem);
   margin: 0 auto;
