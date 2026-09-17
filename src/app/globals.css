@@ -268,6 +268,9 @@ h1 {
 .login-form button:focus-visible,
 .guest-form input:focus-visible,
 .guest-form select:focus-visible,
+.staff-form input:focus-visible,
+.staff-form select:focus-visible,
+.staff-form button:focus-visible,
 .guest-action-button:focus-visible,
 .guest-delete-button:focus-visible,
 .delete-confirmation button:focus-visible,
@@ -818,6 +821,79 @@ tbody tr:last-child td {
 .form-panel {
   max-width: 44rem;
   padding: clamp(1.25rem, 4vw, 2rem);
+}
+
+.staff-access-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.staff-list-panel,
+.staff-add-panel {
+  overflow: hidden;
+}
+
+.staff-form {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.staff-form label {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.staff-form input,
+.staff-form select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.625rem;
+  background: var(--surface);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.staff-form button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: 0.625rem;
+  background: var(--accent);
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.staff-form button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.staff-form-message {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 0.625rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.staff-role {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  text-transform: capitalize;
 }
 
 .empty-state {
@@ -1387,6 +1463,10 @@ tbody tr:last-child td {
 
   .attendance-panel {
     min-height: 34rem;
+  }
+
+  .staff-access-layout {
+    grid-template-columns: 1fr;
   }
 
   .guest-form {

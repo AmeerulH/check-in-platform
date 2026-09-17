@@ -1,14 +1,7 @@
 import Link from "next/link";
-import { ClipboardList, LayoutDashboard, QrCode, Users } from "lucide-react";
+import { ClipboardList, LayoutDashboard, QrCode, ShieldCheck, Users } from "lucide-react";
 
 import type { StaffMember } from "@/lib/auth/staff";
-
-const navigation = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/guests", label: "Guests", icon: Users },
-  { href: "/scanner", label: "Scan pass", icon: QrCode },
-  { href: "/attendance", label: "Check-ins", icon: ClipboardList },
-];
 
 export function AppShell({
   children,
@@ -19,6 +12,16 @@ export function AppShell({
   currentPath: string;
   staffMember: StaffMember;
 }) {
+  const navigation = [
+    { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+    { href: "/admin/guests", label: "Guests", icon: Users },
+    { href: "/scanner", label: "Scan pass", icon: QrCode },
+    { href: "/attendance", label: "Check-ins", icon: ClipboardList },
+    ...(staffMember.role === "organizer"
+      ? [{ href: "/admin/staff", label: "Staff access", icon: ShieldCheck }]
+      : []),
+  ];
+
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
