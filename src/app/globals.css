@@ -652,6 +652,16 @@ h1 {
   align-content: center;
 }
 
+.attendance-table-empty td[colspan] {
+  display: table-cell;
+  text-align: center;
+}
+
+.attendance-table-empty td[colspan] .empty-state {
+  width: 100%;
+  justify-items: center;
+}
+
 .panel-heading,
 .directory-toolbar {
   display: flex;
