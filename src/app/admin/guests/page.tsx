@@ -66,7 +66,11 @@ export default async function GuestsPage() {
                         </span>
                       </td>
                       <td>
-                        <GuestActions guestId={guest.id} guestName={guest.display_name} />
+                        <GuestActions
+                          guestEmail={guest.normalized_email}
+                          guestId={guest.id}
+                          guestName={guest.display_name}
+                        />
                       </td>
                     </tr>
                   ))}

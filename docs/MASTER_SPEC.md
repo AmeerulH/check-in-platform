@@ -41,7 +41,7 @@ The platform is operationally and technically separate from the existing SCPH we
 | Repeat scans | Allowed and retained |
 | Daily attendance | One attendance summary per guest per event day |
 | Live updates | Supabase Realtime with authoritative refetch |
-| Email delivery | Resend |
+| Guest pass sharing | Staff-controlled native share sheet, Gmail compose link, default mail app or copied pass link |
 | Expected scale | Up to 500 guests and five simultaneous scanners |
 | Connectivity | Normally online with a short offline retry queue |
 | Event dates | 12, 13, 14 and 15 October 2026 |
@@ -168,10 +168,6 @@ flowchart LR
     IndexedDB[(TemporaryOfflineQueue)]
   end
 
-  subgraph email [EmailService]
-    Resend[Resend]
-  end
-
   Organizer --> AdminUI
   ScannerStaff --> ScannerUI
   Viewer --> DashboardUI
@@ -187,8 +183,7 @@ flowchart LR
   NextAPI --> Postgres
   Postgres --> Realtime
   Realtime --> DashboardUI
-  NextAPI --> Resend
-  Resend --> Guest
+  AdminUI --> Guest
 ```
 
 ### 5.1 Runtime isolation
@@ -324,9 +319,10 @@ to users.
 - **QR generation/reissue:** Disable repeated generation while processing.
   Confirm the active credential version only after it is stored. Explain
   revoked, unavailable and failed-generation states without exposing tokens.
-- **Pass delivery:** Clearly distinguish queued, sent, delivered, bounced and
-  failed statuses. A resend must retain the same active credential unless an
-  organizer explicitly rotates it.
+- **Pass sharing:** Clearly distinguish a pass that is ready to share from one
+  that could not be generated. Delivery itself occurs in the organizer’s
+  selected app and is not observable by the platform. Each explicit replacement
+  rotates the credential.
 - **QR scanning:** Immediately show server-confirmed first scan, repeat scan,
   invalid pass, revoked pass, inactive guest, out-of-hours and network-pending
   results. A decoded QR is not a successful check-in until the server confirms
@@ -717,39 +713,40 @@ It must not display attendance history, staff information or administrative meta
 
 ## 12. Pass Distribution
 
-### 12.1 Supported version 1 channels
+### 12.1 Supported version 1 sharing channels
 
-- Personalized email through Resend
+- Native browser share sheet (mobile)
+- Prefilled Gmail compose link
+- Prefilled default mail app
 - Copyable private pass link
 - QR image download
 - Printable pass
 
-### 12.2 Email flow
+### 12.2 Staff-controlled sharing flow
 
 ```mermaid
 sequenceDiagram
   participant Organizer
   participant NextApp
   participant Database
-  participant Resend
+  participant MailApp
   participant Guest
 
-  Organizer->>NextApp: SendOrResendPass
-  NextApp->>Database: ConfirmGuestAndActiveCredential
-  NextApp->>Resend: SendPersonalizedEmail
-  Resend-->>Guest: DeliverPassLink
-  Resend-->>NextApp: DeliveryWebhook
-  NextApp->>Database: RecordDeliveryStatus
+  Organizer->>NextApp: Create replacement pass
+  NextApp->>Database: Revoke current pass and issue new pass
+  NextApp-->>Organizer: Present sharing options
+  Organizer->>MailApp: Choose share, Gmail, mail app or copy link
+  MailApp-->>Guest: Deliver private pass link
 ```
 
-### 12.3 Delivery requirements
+### 12.3 Sharing requirements
 
-- Bulk delivery must be rate-controlled and resumable.
-- Each recipient must have an individual status.
-- Failed sends must be retryable without rotating the QR.
-- Resends must be audited.
-- Supabase Auth email is reserved for staff authentication and must not be used for the guest campaign.
-- QR secrets and guest PII must be redacted from application and webhook logs.
+- The platform creates a new pass only when an organizer explicitly confirms replacement.
+- The organizer chooses a browser-native share target, Gmail, their configured mail app, or copies the private pass link.
+- The platform cannot observe delivery, bounces or provider-side failures because the organizer’s mail app sends the message.
+- Creating a replacement pass revokes the prior pass. This is required because opaque QR secrets are not stored in recoverable form.
+- Supabase Auth email remains reserved for staff authentication.
+- QR secrets and guest PII must be redacted from application logs.
 
 ---
 
@@ -941,16 +938,14 @@ All endpoint names are provisional until the dedicated API contract is approved.
 | `PATCH /api/guests/[id]` | Organizer | Edit or change guest status |
 | `POST /api/guests/import/preview` | Organizer | Validate CSV |
 | `POST /api/guests/import/commit` | Organizer | Commit accepted rows |
-| `POST /api/guests/[id]/credential` | Organizer | Issue/revoke/reissue QR |
-| `POST /api/guests/[id]/send-pass` | Organizer | Send one pass |
-| `POST /api/delivery/batch` | Organizer | Begin/resume bulk delivery |
+| `POST /api/guests/[id]/credential` | Organizer | Issue a replacement QR for staff sharing |
+| `DELETE /api/guests/[id]` | Organizer | Delete an unscanned guest |
 | `POST /api/check-in` | Organizer or scanner | Record scan |
 | `GET /api/attendance` | Organizer or viewer | Read dashboard data |
 | `GET /api/attendance/export` | Organizer | Export attendance |
 | `GET /api/staff` | Organizer | List allowed staff |
 | `POST /api/staff` | Organizer | Add staff membership |
 | `PATCH /api/staff/[id]` | Organizer | Change role or active status |
-| `POST /api/webhooks/resend` | Signed webhook | Update delivery status |
 
 ### 16.1 API standards
 
@@ -1070,8 +1065,6 @@ flowchart LR
   VercelProduction --> ProductionConfig[ProductionEnvironment]
 
   ProductionConfig --> ProductionSupabase[DedicatedSupabaseProject]
-  ProductionConfig --> ResendProduction[VerifiedResendDomain]
-
   ProductionSupabase --> ProviderBackups[SupabaseBackups]
   ProductionSupabase --> DailyExports[EncryptedDailyExports]
 ```
@@ -1084,7 +1077,7 @@ flowchart LR
 - Supabase CLI/local database
 - Seeded test event and guests
 - Test admin allowlist
-- Resend test mode or mocked delivery
+- Test native share sheet, Gmail compose and default mail-app links
 - `DEV_PREVIEW_MODE=true` may expose mock interface data without staff login
   only when `NODE_ENV=development`; it is server-only and must remain disabled
   in preview and production environments.
@@ -1099,7 +1092,6 @@ flowchart LR
 
 - Standalone production domain
 - Dedicated Supabase project
-- Resend verified sending domain
 - Production allowlist and event data
 - Backups, monitoring and audit controls
 
@@ -1113,8 +1105,7 @@ Before production testing:
 - Server-only Supabase secret configured outside source control
 - Vercel project
 - Production or temporary test domain
-- Resend account and API key
-- Verified sending domain before real guest delivery
+- Staff devices with an approved mail or sharing app before real guest delivery
 
 Secrets must be placed in local or hosted environment configuration and must not be pasted into specifications, chat messages, source control or screenshots.
 
@@ -1186,10 +1177,10 @@ Secrets must be placed in local or hosted environment configuration and must not
 
 ### 21.7 Delivery
 
-- Individual and batch sends are tracked.
-- Failed deliveries are retryable.
-- Resending does not rotate the QR.
-- Webhook requests are authenticated.
+- The native share sheet, Gmail compose link, mail-app link and copied pass link open correctly.
+- A new sharing action only creates a replacement QR after organizer confirmation.
+- The recipient can open the shared private pass link and view the QR code.
+- Delivery status is not tracked because sending happens outside the platform.
 
 ### 21.8 Quality gates
 
@@ -1221,7 +1212,7 @@ Before 12 October 2026:
 - Import and reconcile the final guest list.
 - Test every staff account and role.
 - Enroll and label scanner devices.
-- Test printed, emailed and screenshot QR passes.
+- Test printed, shared-link and screenshot QR passes.
 - Test low-light and damaged-screen scanning.
 - Rehearse duplicate, revoked and invalid QR handling.
 - Rehearse network loss and queued synchronization.
@@ -1259,7 +1250,7 @@ Current working assumption:
 
 Actual compute size, usage, taxes, add-ons and billing configuration must be confirmed in Supabase Billing before provisioning.
 
-Vercel, Resend, domain and overage costs are separate and must be verified against the selected accounts and expected email volume.
+Vercel, domain and overage costs are separate and must be verified against the selected accounts and expected usage.
 
 ---
 
@@ -1274,7 +1265,7 @@ The following inputs must be finalized before the main implementation phase plan
 5. Whether scanners may check in guests through manual search without a QR.
 6. Whether a guest photo is needed for identity confirmation.
 7. Whether viewers may export attendance.
-8. Email sender name, address, branding and copy.
+8. Guest pass sharing copy and approved staff mail/share apps.
 9. Guest data-retention and deletion policy.
 10. Manual correction and approval policy.
 11. Final supported phone/browser list.
@@ -1309,7 +1300,7 @@ Implementation tickets and phase plans must reference the approved version of th
 | Guest email deduplication | Confirmed |
 | Reusable four-day QR | Confirmed |
 | Repeat-scan attendance model | Confirmed |
-| Resend plus manual sharing | Confirmed |
+| Staff-controlled pass sharing | Confirmed |
 | Brief offline retry queue | Confirmed |
 | Database schema | Proposed |
 | API contracts | Proposed |

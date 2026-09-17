@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app/app-shell";
+import { LiveAttendance } from "@/components/dashboard/live-attendance";
 import { requireStaffMember } from "@/lib/auth/staff";
 import { EVENT_ID, EVENT_TIMEZONE } from "@/lib/event";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -106,7 +107,8 @@ export default async function DashboardPage({
 
   return (
     <AppShell currentPath="/dashboard" staffMember={staffMember}>
-      <div className="workspace">
+      <LiveAttendance eventDayId={eventDay?.id}>
+        <div className="workspace">
         <header className="workspace-heading">
           <div>
             <p className="eyebrow">
@@ -114,7 +116,7 @@ export default async function DashboardPage({
             </p>
             <h1>Today’s attendance</h1>
           </div>
-          <span className="connection-status">Live updates coming with scanning</span>
+          <span className="connection-status">Live attendance updates</span>
         </header>
         {login === "success" && (
           <p className="status-message status-success" role="status">
@@ -166,7 +168,8 @@ export default async function DashboardPage({
             )}
           </ol>
         </section>
-      </div>
+        </div>
+      </LiveAttendance>
     </AppShell>
   );
 }
