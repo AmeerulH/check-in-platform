@@ -110,7 +110,10 @@ export async function POST(request: Request) {
   }
 
   if (error || !result) {
-    console.error("Unable to record check-in.", { code: error?.code });
+    console.error("Unable to record check-in.", {
+      code: error?.code,
+      message: error?.message,
+    });
     return apiError({
       code: "SCAN_RECORD_FAILED",
       message: "We could not confirm this check-in. Please try again.",
