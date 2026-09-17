@@ -33,7 +33,7 @@ The platform is operationally and technically separate from the existing SCPH we
 | Deployment | Separate Vercel project |
 | Backend | Dedicated Supabase project |
 | Database | Supabase Postgres |
-| Staff authentication | Passwordless email magic link or OTP |
+| Staff authentication | Google OAuth with an approved-email allowlist |
 | Staff authorization | Exact-email allowlist stored in Postgres |
 | Guest authentication | None required |
 | Guest identity key | Normalized email, unique within an event |
@@ -253,7 +253,7 @@ flowchart TD
 
 | Route | Access | Purpose |
 | --- | --- | --- |
-| `/login` | Public | Request staff magic link or OTP |
+| `/login` | Public | Google sign-in for approved staff |
 | `/auth/callback` | Public | Complete Supabase authentication |
 | `/pass/[publicId]` | Public with secret | Display a guest pass |
 | `/admin/guests` | Organizer | Manage invitees |
@@ -307,11 +307,10 @@ to users.
 
 #### Required flow behavior
 
-- **Staff login:** Show that a magic link was requested without confirming
-  whether the email is allowlisted. After a successful callback, show
-  “Signed in successfully” on the dashboard. Invalid, expired, consumed or
-  failed links return to login with a visible recovery message and a request
-  for a new link.
+- **Staff login:** Google must show an account picker every time. After a
+  successful callback, show “Signed in successfully” on the dashboard. An
+  unapproved Google account returns to login with a visible access-denied
+  message and a control to choose a different account.
 - **Guest creation/import:** Preserve valid typed fields when validation fails.
   Explain duplicate-email conflicts and link to the existing guest instead of
   silently creating another record. Confirm successful creation with the guest
@@ -569,7 +568,7 @@ sequenceDiagram
 ### 9.1 Authentication requirements
 
 - Access is restricted to exact email addresses in `event_memberships`.
-- Login uses Supabase passwordless magic links or email OTP.
+- Login uses Google OAuth. The Google account email must match an active staff allowlist row.
 - The login response must not reveal whether an address is allowlisted.
 - The first organizer is bootstrapped through a controlled setup procedure.
 - Removing or deactivating a membership must block subsequent protected requests even if an old browser session remains.

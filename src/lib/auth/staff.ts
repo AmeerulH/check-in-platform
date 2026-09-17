@@ -39,13 +39,12 @@ export async function bindStaffMembership({
     .maybeSingle();
 
   if (error || !membership?.active) return false;
-  if (membership.auth_user_id) return membership.auth_user_id === userId;
+  if (membership.auth_user_id === userId) return true;
 
   const { data: boundMembership, error: bindError } = await admin
     .from("event_memberships")
     .update({ auth_user_id: userId })
     .eq("id", membership.id)
-    .is("auth_user_id", null)
     .select("auth_user_id")
     .maybeSingle();
 
