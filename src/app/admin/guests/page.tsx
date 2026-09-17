@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus, Search } from "lucide-react";
 
 import { AppShell } from "@/components/app/app-shell";
+import { GuestActions } from "@/components/guests/guest-actions";
 import { requireStaffMember } from "@/lib/auth/staff";
 import { EVENT_ID } from "@/lib/event";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -47,6 +48,7 @@ export default async function GuestsPage() {
                   <th>Organization</th>
                   <th>Category</th>
                   <th>Today</th>
+                  <th><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -63,11 +65,14 @@ export default async function GuestsPage() {
                           {guest.status === "active" ? "Pass not scanned" : "Inactive"}
                         </span>
                       </td>
+                      <td>
+                        <GuestActions guestId={guest.id} guestName={guest.display_name} />
+                      </td>
                     </tr>
                   ))}
                 {!guests?.length && (
                   <tr>
-                    <td colSpan={4}>
+                    <td colSpan={5}>
                       <div className="empty-state">
                         <strong>No invitees yet</strong>
                         <span>Add the first guest to generate their QR pass.</span>

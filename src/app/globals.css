@@ -193,6 +193,11 @@ h1 {
 .button:focus-visible,
 .login-form input:focus-visible,
 .login-form button:focus-visible,
+.guest-form input:focus-visible,
+.guest-form select:focus-visible,
+.guest-action-button:focus-visible,
+.guest-delete-button:focus-visible,
+.delete-confirmation button:focus-visible,
 .text-link:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--accent) 45%, white);
   outline-offset: 3px;
@@ -668,6 +673,16 @@ tbody tr:last-child td {
   font-weight: 650;
 }
 
+.field-label {
+  display: inline-flex;
+  gap: 0.2rem;
+  align-items: baseline;
+}
+
+.required-mark {
+  color: #b42318;
+}
+
 .guest-form input,
 .guest-form select {
   min-height: 2.875rem;
@@ -678,6 +693,26 @@ tbody tr:last-child td {
   color: var(--foreground);
   font: inherit;
   font-weight: 400;
+}
+
+.select-wrap {
+  position: relative;
+  display: block;
+}
+
+.guest-form select {
+  width: 100%;
+  padding-right: 2.75rem;
+  appearance: none;
+}
+
+.select-wrap svg {
+  position: absolute;
+  top: 50%;
+  right: 0.875rem;
+  pointer-events: none;
+  color: var(--muted);
+  transform: translateY(-50%);
 }
 
 .guest-form input:focus,
@@ -704,6 +739,99 @@ tbody tr:last-child td {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+
+.guest-actions {
+  display: flex;
+  position: relative;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  min-width: 8.5rem;
+}
+
+.guest-action-button,
+.guest-delete-button,
+.delete-confirmation button {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.guest-action-button {
+  padding: 0.4rem 0.6rem;
+}
+
+.guest-delete-button {
+  width: 2.25rem;
+  color: #9c241c;
+}
+
+.guest-action-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.guest-delete-button:hover,
+.delete-confirmation button:first-of-type:hover {
+  border-color: #9c241c;
+  background: #fff0ee;
+}
+
+.guest-action-button:disabled,
+.guest-delete-button:disabled,
+.delete-confirmation button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.delete-confirmation {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  color: #9c241c;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.delete-confirmation button {
+  min-height: 1.875rem;
+  padding: 0.25rem 0.45rem;
+}
+
+.guest-action-message {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: min(20rem, 50vw);
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--foreground);
+  color: white;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .pass-result {
@@ -901,6 +1029,10 @@ tbody tr:last-child td {
     flex: 1;
   }
 
+  .guest-actions {
+    justify-content: flex-start;
+  }
+
   .delivery-list li {
     grid-template-columns: 1fr auto;
   }
@@ -916,6 +1048,12 @@ tbody tr:last-child td {
 
   .pass-result img {
     margin: 0 auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
   }
 }
 

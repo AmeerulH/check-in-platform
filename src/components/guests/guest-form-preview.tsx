@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { FormEvent, useState } from "react";
 
 type GuestResponse = {
@@ -99,26 +100,29 @@ export function GuestFormPreview() {
         )}
         <form className="guest-form" onSubmit={handleSubmit}>
           <label>
-            Full name <span aria-hidden="true">*</span>
+            <span className="field-label">Full name <span className="required-mark" aria-hidden="true">*</span></span>
             <input name="name" required />
           </label>
           <label>
-            Email address <span aria-hidden="true">*</span>
+            <span className="field-label">Email address <span className="required-mark" aria-hidden="true">*</span></span>
             <input autoComplete="email" name="email" required type="email" />
           </label>
           <label>
-            Organization
+            <span className="field-label">Organization</span>
             <input name="organization" />
           </label>
           <label>
-            Guest category
-            <select defaultValue="" name="category">
-              <option disabled value="">Choose a category</option>
-              <option>Delegate</option>
-              <option>Speaker</option>
-              <option>Partner</option>
-              <option>Staff</option>
-            </select>
+            <span className="field-label">Guest category</span>
+            <span className="select-wrap">
+              <select defaultValue="" name="category">
+                <option disabled value="">Choose a category</option>
+                <option>Delegate</option>
+                <option>Speaker</option>
+                <option>Partner</option>
+                <option>Staff</option>
+              </select>
+              <ChevronDown aria-hidden="true" size={18} />
+            </span>
           </label>
           <div className="form-actions">
             <Link className="button button-secondary" href="/admin/guests">
