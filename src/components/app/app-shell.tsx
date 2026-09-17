@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ClipboardList, LayoutDashboard, QrCode, ShieldCheck, Users } from "lucide-react";
 
+import { LogoutButton } from "@/components/auth/logout-button";
 import type { StaffMember } from "@/lib/auth/staff";
 
 export function AppShell({
@@ -51,6 +52,7 @@ export function AppShell({
             <span>{staffMember.normalized_email}</span>
           </div>
         </div>
+        <LogoutButton />
       </aside>
       <main className="app-main">{children}</main>
     </div>

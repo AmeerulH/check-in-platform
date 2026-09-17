@@ -267,6 +267,7 @@ h1 {
 .login-form input:focus-visible,
 .login-form button:focus-visible,
 .google-sign-in:focus-visible,
+.logout-control button:focus-visible,
 .guest-form input:focus-visible,
 .guest-form select:focus-visible,
 .staff-form input:focus-visible,
@@ -530,6 +531,52 @@ h1 {
   font-size: 0.75rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.logout-control {
+  position: relative;
+}
+
+.logout-control button {
+  display: inline-flex;
+  width: 100%;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 0.625rem;
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.logout-control button:hover:not(:disabled) {
+  border-color: #9c241c;
+  color: #9c241c;
+}
+
+.logout-control button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.logout-control p {
+  position: absolute;
+  bottom: calc(100% + 0.5rem);
+  left: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0.5rem;
+  border: 1px solid #9c241c;
+  border-radius: 0.5rem;
+  background: #fff0ee;
+  color: #9c241c;
+  font-size: 0.75rem;
+  line-height: 1.35;
 }
 
 .app-main {
