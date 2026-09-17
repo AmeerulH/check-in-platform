@@ -1018,6 +1018,48 @@ tbody tr:last-child td {
   text-transform: capitalize;
 }
 
+.staff-role-select {
+  min-width: 8.5rem;
+  min-height: 2.25rem;
+  padding: 0 2.5rem 0 0.625rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background-color: var(--surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%235e7069' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 0.875rem;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.8125rem;
+  appearance: none;
+}
+
+.staff-role-save {
+  min-height: 2.25rem;
+  padding: 0 0.625rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.staff-role-save:disabled {
+  cursor: default;
+  color: var(--muted);
+  opacity: 0.55;
+}
+
+.staff-role-select:focus-visible,
+.staff-role-save:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 45%, white);
+  outline-offset: 3px;
+}
+
 .empty-state {
   display: grid;
   gap: 0.35rem;

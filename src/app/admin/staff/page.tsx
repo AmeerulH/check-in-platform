@@ -24,7 +24,10 @@ export default async function StaffPage() {
             <p>Organizers manage who can sign in and what they can do during the event.</p>
           </div>
         </header>
-        <StaffAccessManager staffMembers={staffMembers ?? []} />
+        <StaffAccessManager
+          currentStaffMemberId={staffMember.id}
+          staffMembers={staffMembers ?? []}
+        />
       </div>
     </AppShell>
   );

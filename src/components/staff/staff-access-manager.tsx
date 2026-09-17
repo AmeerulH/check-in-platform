@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type StaffAccessManagerProps = {
+  currentStaffMemberId: string;
   staffMembers: Array<{
     active: boolean;
     id: string;
@@ -18,10 +19,15 @@ type StaffResponse = {
   error?: { code?: string; message?: string };
 };
 
-export function StaffAccessManager({ staffMembers }: StaffAccessManagerProps) {
+export function StaffAccessManager({
+  currentStaffMemberId,
+  staffMembers,
+}: StaffAccessManagerProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("organizer");
+  const [roleChanges, setRoleChanges] = useState<Record<string, string>>({});
+  const [savingStaffId, setSavingStaffId] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 
@@ -51,6 +57,39 @@ export function StaffAccessManager({ staffMembers }: StaffAccessManagerProps) {
     } catch {
       setStatus("error");
       setMessage("We could not reach the staff service. Check your connection and try again.");
+    }
+  }
+
+  async function updateStaffRole(staffId: string) {
+    const nextRole = roleChanges[staffId];
+    const currentRole = staffMembers.find((staffMember) => staffMember.id === staffId)?.role;
+    if (!nextRole || nextRole === currentRole) return;
+
+    setSavingStaffId(staffId);
+    setStatus("idle");
+    setMessage("");
+    try {
+      const response = await fetch(`/api/staff/${staffId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: nextRole }),
+      });
+      const body = (await response.json()) as StaffResponse;
+
+      if (!response.ok || !body.data) {
+        setStatus("error");
+        setMessage(body.error?.message ?? "We could not update this staff role. Please try again.");
+        return;
+      }
+
+      setStatus("success");
+      setMessage(`${body.data.normalized_email} is now an ${body.data.role}.`);
+      router.refresh();
+    } catch {
+      setStatus("error");
+      setMessage("We could not reach the staff service. Check your connection and try again.");
+    } finally {
+      setSavingStaffId(null);
     }
   }
 
@@ -108,17 +147,51 @@ export function StaffAccessManager({ staffMembers }: StaffAccessManagerProps) {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Access</th>
+                <th><span className="sr-only">Update role</span></th>
               </tr>
             </thead>
             <tbody>
               {staffMembers.map((staffMember) => (
                 <tr key={staffMember.id}>
                   <td>{staffMember.normalized_email}</td>
-                  <td><span className="staff-role">{staffMember.role}</span></td>
+                  <td>
+                    {staffMember.id === currentStaffMemberId ? (
+                      <span className="staff-role">{staffMember.role}</span>
+                    ) : (
+                      <select
+                        className="staff-role-select"
+                        disabled={savingStaffId === staffMember.id}
+                        onChange={(event) => setRoleChanges((current) => ({
+                          ...current,
+                          [staffMember.id]: event.target.value,
+                        }))}
+                        value={roleChanges[staffMember.id] ?? staffMember.role}
+                      >
+                        <option value="organizer">Organizer</option>
+                        <option value="scanner">Scanner</option>
+                        <option value="viewer">Viewer</option>
+                      </select>
+                    )}
+                  </td>
                   <td>
                     <span className={`status-badge ${staffMember.active ? "status-checked_in" : "status-not_arrived"}`}>
                       {staffMember.active ? "Active" : "Inactive"}
                     </span>
+                  </td>
+                  <td>
+                    {staffMember.id !== currentStaffMemberId && (
+                      <button
+                        className="staff-role-save"
+                        disabled={
+                          savingStaffId === staffMember.id ||
+                          (roleChanges[staffMember.id] ?? staffMember.role) === staffMember.role
+                        }
+                        onClick={() => void updateStaffRole(staffMember.id)}
+                        type="button"
+                      >
+                        {savingStaffId === staffMember.id ? "Saving…" : "Save"}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
