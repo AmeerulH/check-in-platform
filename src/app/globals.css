@@ -825,7 +825,7 @@ tbody tr:last-child td {
 
 .staff-access-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
+  grid-template-columns: 1fr;
   gap: 1rem;
   align-items: start;
 }
@@ -837,7 +837,9 @@ tbody tr:last-child td {
 
 .staff-form {
   display: grid;
+  grid-template-columns: minmax(15rem, 1.25fr) minmax(16rem, 1fr) auto;
   gap: 1rem;
+  align-items: end;
   padding: 1.25rem;
 }
 
@@ -882,6 +884,7 @@ tbody tr:last-child td {
 }
 
 .staff-form-message {
+  grid-column: 1 / -1;
   margin: 0;
   padding: 0.75rem;
   border: 1px solid currentColor;
@@ -1467,6 +1470,14 @@ tbody tr:last-child td {
 
   .staff-access-layout {
     grid-template-columns: 1fr;
+  }
+
+  .staff-form {
+    grid-template-columns: 1fr;
+  }
+
+  .staff-form-message {
+    grid-column: auto;
   }
 
   .guest-form {

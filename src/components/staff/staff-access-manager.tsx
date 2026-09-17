@@ -56,38 +56,6 @@ export function StaffAccessManager({ staffMembers }: StaffAccessManagerProps) {
 
   return (
     <div className="staff-access-layout">
-      <section className="content-panel staff-list-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Approved staff</h2>
-            <p>{staffMembers.length} people can access this event workspace.</p>
-          </div>
-        </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Access</th>
-              </tr>
-            </thead>
-            <tbody>
-              {staffMembers.map((staffMember) => (
-                <tr key={staffMember.id}>
-                  <td>{staffMember.normalized_email}</td>
-                  <td><span className="staff-role">{staffMember.role}</span></td>
-                  <td>
-                    <span className={`status-badge ${staffMember.active ? "status-checked_in" : "status-not_arrived"}`}>
-                      {staffMember.active ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
       <section className="content-panel staff-add-panel">
         <div className="panel-heading">
           <div>
@@ -125,6 +93,38 @@ export function StaffAccessManager({ staffMembers }: StaffAccessManagerProps) {
             </p>
           )}
         </form>
+      </section>
+      <section className="content-panel staff-list-panel">
+        <div className="panel-heading">
+          <div>
+            <h2>Approved staff</h2>
+            <p>{staffMembers.length} people can access this event workspace.</p>
+          </div>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Access</th>
+              </tr>
+            </thead>
+            <tbody>
+              {staffMembers.map((staffMember) => (
+                <tr key={staffMember.id}>
+                  <td>{staffMember.normalized_email}</td>
+                  <td><span className="staff-role">{staffMember.role}</span></td>
+                  <td>
+                    <span className={`status-badge ${staffMember.active ? "status-checked_in" : "status-not_arrived"}`}>
+                      {staffMember.active ? "Active" : "Inactive"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );
