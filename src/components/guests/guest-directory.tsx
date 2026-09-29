@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -58,7 +59,7 @@ export function GuestDirectory({ guests }: { guests: DirectoryGuest[] }) {
         <td data-label="Guest"><div className="guest-table-cell"><strong>{guest.display_name}</strong><span>{guest.normalized_email}</span></div></td>
         <td data-label="Organization">{guest.organization ?? "—"}</td>
         <td data-label="Ticket">{guest.ticket_type ?? guest.category ?? "—"}</td>
-        <td data-label="Speaker mode">{guest.category?.toLowerCase() === "speaker" ? <select aria-label={`Attendance mode for ${guest.display_name}`} disabled={busyId === guest.id} onChange={(event) => void setMode(guest.id, event.target.value)} value={guest.speaker_mode ?? ""}><option value="">Unassigned</option><option value="in_person">In-person</option><option value="virtual">Virtual</option></select> : "—"}</td>
+        <td data-label="Speaker mode">{guest.category?.toLowerCase() === "speaker" ? <span className="inline-loading-control"><select aria-label={`Attendance mode for ${guest.display_name}`} disabled={busyId === guest.id} onChange={(event) => void setMode(guest.id, event.target.value)} value={guest.speaker_mode ?? ""}><option value="">Unassigned</option><option value="in_person">In-person</option><option value="virtual">Virtual</option></select>{busyId === guest.id && <span role="status"><LoaderCircle aria-hidden="true" className="spin" size={16} /><span className="sr-only">Saving speaker mode</span></span>}</span> : "—"}</td>
         <td data-label="Email">{guest.email_marked_sent_at ? <span className="status-badge status-checked_in">Marked sent</span> : <span className="status-badge status-not_arrived">Not marked sent</span>}</td>
         <td className="guest-actions-cell" data-label="Actions"><GuestActions guestEmail={guest.normalized_email} guestId={guest.id} guestName={guest.display_name} ticketType={guest.ticket_type} emailMarkedSentAt={guest.email_marked_sent_at} /></td>
       </tr>)}{!filtered.length && <tr><td colSpan={6}><div className="empty-state"><strong>No invitees match these filters</strong><span>Adjust the search or filter controls.</span></div></td></tr>}</tbody>

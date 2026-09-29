@@ -319,6 +319,7 @@ export function GuestActions({ guestEmail, guestId, guestName, ticketType, email
         <span className="delete-confirmation">
           <span>Delete?</span>
           <button disabled={action !== null} onClick={deleteGuest} type="button">
+            {action === "delete" && <LoaderCircle aria-hidden="true" className="spin" size={16} />}
             {action === "delete" ? "Deleting…" : "Yes"}
           </button>
           <button disabled={action !== null} onClick={() => setConfirmingDelete(false)} type="button">
@@ -393,7 +394,8 @@ export function GuestActions({ guestEmail, guestId, guestName, ticketType, email
                 : "This older QR can be attached, but needs one regeneration before its direct link can be shared."}
             </p>
             <button disabled={action !== null || Boolean(emailMarkedSentAt)} onClick={() => void markEmailSent()} type="button">
-              {emailMarkedSentAt ? "Email marked sent" : "Mark email sent after sending"}
+              {action === "share" && <LoaderCircle aria-hidden="true" className="spin" size={16} />}
+              {action === "share" ? "Marking sent…" : emailMarkedSentAt ? "Email marked sent" : "Mark email sent after sending"}
             </button>
             {shareMessage && <p className="guest-share-message" role="status">{shareMessage}</p>}
           </div>

@@ -205,6 +205,7 @@ export function StaffAccessManager({
                         onClick={() => void updateStaffRole(staffMember.id)}
                         type="button"
                       >
+                        {savingStaffId === staffMember.id && <LoaderCircle aria-hidden="true" className="spin" size={16} />}
                         {savingStaffId === staffMember.id ? "Saving…" : "Save"}
                       </button>
                     )}

@@ -190,7 +190,7 @@ export function AttendanceLog({ eventDays, initialPage }: AttendanceLogProps) {
           </tbody>
         </table>
         <div aria-live="polite" className="attendance-load-state" ref={sentinelRef}>
-          {attendanceQuery.isFetchingNextPage && "Loading more check-ins…"}
+          {attendanceQuery.isFetchingNextPage && <span className="inline-loading-control"><LoaderCircle aria-hidden="true" className="spin" size={16} />Loading more check-ins…</span>}
           {!attendanceQuery.isFetchingNextPage && attendanceQuery.hasNextPage && items.length > 0 && "Scroll for more"}
           {attendanceQuery.isError && (
             <button disabled={attendanceQuery.isRefetching} onClick={() => void attendanceQuery.refetch()} type="button">

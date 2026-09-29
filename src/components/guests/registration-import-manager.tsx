@@ -1,5 +1,6 @@
 "use client";
 
+import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -60,7 +61,7 @@ export function RegistrationImportManager({ latest, changes, guide }: {
     <section className="content-panel admin-panel">
       <h2>Sheet connection</h2>
       <p>GTP2026 Registration Namelist · Sheet1 · daily at 08:00 Malaysia time</p>
-      <button disabled={busy !== null} onClick={() => void syncNow()} type="button">{busy === "sync" ? "Syncing…" : "Sync now"}</button>
+      <button disabled={busy !== null} onClick={() => void syncNow()} type="button">{busy === "sync" && <LoaderCircle aria-hidden="true" className="spin" size={16} />}{busy === "sync" ? "Syncing…" : "Sync now"}</button>
       <p>Last run: {latest ? `${latest.status} · ${new Date(latest.created_at).toLocaleString("en-MY")}` : "No run yet"}</p>
       {latest && <p>Rows: {String(summary.sourceRows ?? "—")} · New: {String(summary.created ?? "—")} · Changes queued: {String(summary.pendingReview ?? "—")}</p>}
       {Array.isArray(summary.invalidRows) && summary.invalidRows.length > 0 && <p>Rows needing review: {summary.invalidRows.join(", ")}</p>}
@@ -72,7 +73,7 @@ export function RegistrationImportManager({ latest, changes, guide }: {
       <p>{guide ? `${guide.file_name} · uploaded ${new Date(guide.uploaded_at).toLocaleString("en-MY")}` : "No guide uploaded yet."}</p>
       <form onSubmit={(event) => { event.preventDefault(); void uploadGuide(new FormData(event.currentTarget)); }}>
         <input accept="application/pdf" name="guide" required type="file" />
-        <button disabled={busy !== null} type="submit">{busy === "guide" ? "Uploading…" : "Upload approved PDF"}</button>
+        <button disabled={busy !== null} type="submit">{busy === "guide" && <LoaderCircle aria-hidden="true" className="spin" size={16} />}{busy === "guide" ? "Uploading…" : "Upload approved PDF"}</button>
       </form>
     </section>
     <section className="content-panel admin-panel">
@@ -86,6 +87,7 @@ export function RegistrationImportManager({ latest, changes, guide }: {
         <div className="inline-actions">
           <button disabled={busy !== null} onClick={() => void review(change.id, "apply")} type="button">Apply</button>
           <button disabled={busy !== null} onClick={() => void review(change.id, "dismiss")} type="button">Dismiss</button>
+          {busy === change.id && <span className="inline-loading-control" role="status"><LoaderCircle aria-hidden="true" className="spin" size={16} />Reviewing…</span>}
         </div>
       </article>)}
     </section>
