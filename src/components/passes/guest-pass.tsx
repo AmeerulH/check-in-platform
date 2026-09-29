@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 type PassState =
   | { status: "loading" }
-  | { status: "ready"; guestName: string; qrDataUrl: string }
+  | { status: "ready"; guestName: string; qrDataUrl: string; ticketType: string | null; designation: string | null; organization: string | null; country: string | null; speakerMode: string | null }
   | { status: "error"; message: string; code: string };
 
 export function GuestPass({ publicId }: { publicId: string }) {
@@ -33,6 +33,11 @@ export function GuestPass({ publicId }: { publicId: string }) {
           status: "ready",
           guestName: data.guestName,
           qrDataUrl: data.qrDataUrl,
+          ticketType: data.ticketType,
+          designation: data.designation,
+          organization: data.organization,
+          country: data.country,
+          speakerMode: data.speakerMode,
         });
       })
       .catch((error) => {
@@ -75,14 +80,26 @@ export function GuestPass({ publicId }: { publicId: string }) {
     );
   }
 
+  const isOnline = /\bonline\b/i.test(state.ticketType ?? "");
+
   return (
     <main className="pass-shell">
       <section className="pass-card">
         <p className="eyebrow">Global Tipping Points 2026</p>
         <h1>{state.guestName}</h1>
-        <p className="lede">Present this QR code at registration from 12–15 October.</p>
-        <img className="pass-qr" alt={`GTP guest pass for ${state.guestName}`} src={state.qrDataUrl} />
-        <p className="pass-note">Keep this pass private. It is valid throughout the event.</p>
+        <p className="lede">Your individual GTP 2026 registration details</p>
+        <dl className="pass-details">
+          {state.ticketType && <div><dt>Registration</dt><dd>{state.ticketType}</dd></div>}
+          {state.designation && <div><dt>Designation</dt><dd>{state.designation}</dd></div>}
+          {state.organization && <div><dt>Organization</dt><dd>{state.organization}</dd></div>}
+          {state.country && <div><dt>Country</dt><dd>{state.country}</dd></div>}
+          {state.speakerMode && <div><dt>Speaker attendance</dt><dd>{state.speakerMode === "in_person" ? "In-person" : "Virtual"}</dd></div>}
+        </dl>
+        {isOnline ? <p>No QR code is needed for online participation.</p> : <>
+          <p>Present this QR code if you visit the conference on site from 12–15 October.</p>
+          <img className="pass-qr" alt={`GTP guest pass for ${state.guestName}`} src={state.qrDataUrl} />
+        </>}
+        <p className="pass-note">Keep this registration page private. It is valid throughout the event.</p>
         <button className="button button-secondary" onClick={() => window.print()} type="button">
           Print pass
         </button>

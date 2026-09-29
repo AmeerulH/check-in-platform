@@ -1,38 +1,44 @@
-# GTP Guest Check-In
+# GTP Check-in
 
-Standalone guest invitation and attendance platform for GTP 2026.
+Standalone guest invitation and attendance app for GTP 2026. The canonical
+architecture and decisions are in [docs/MASTER_SPEC.md](docs/MASTER_SPEC.md).
 
-The canonical requirements and architecture are documented in
-[`docs/MASTER_SPEC.md`](docs/MASTER_SPEC.md).
+## Local preview
 
-## Current phase
+Run `npm install` and `npm run dev`, then open http://localhost:3000. Staff
+pages require an allowlisted Google account. `DEV_PREVIEW_MODE=true` is for
+local-only interface review; it must never be enabled in preview or production.
 
-Phase 1 establishes the application foundation only:
+## Registration Sheet sync
 
-- Next.js App Router with strict TypeScript
-- Tailwind CSS
-- typed environment boundaries
-- approved QR generation and scanning dependencies
-- lint, typecheck and production build scripts
+The app reads `GTP2026 Registration Namelist` → `Sheet1` with a dedicated
+Google service account. Share the Sheet with its service account email as a
+**viewer**, then set `GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL` and
+`GOOGLE_SHEETS_PRIVATE_KEY` server-side. The private key may contain literal
+`\n` escapes. Set a random `CRON_SECRET` in Vercel. Vercel invokes the sync at
+00:00 UTC (08:00 Malaysia time); organizers can use **Sheet sync → Sync now**.
 
-Guest management, authentication, Supabase schema and check-in workflows are
-not implemented in this phase.
+Apply the versioned Supabase migration before enabling sync. A run imports new
+emails and creates missing QR passes; updates to existing guests wait for
+organizer review. It never removes guests or replaces active passes. The Sheet
+registration ID is stored for reference only; normalized email is the unique
+guest key. A failed pass appears in the run summary and can be repaired through
+the guest action. Avoid running simultaneous syncs.
 
-## Local setup
+## 5 October email preparation
 
-```bash
-npm install
-cp .env.example .env.local
-npm run dev
-```
+Each guest's **Share** action prepares their private registration link and QR
+PNG for on-site guests. Online participants get their individual details without
+a QR prompt. The participant guide is optional in the app; the team can attach its own
+copy when sending. If the browser supports file sharing, the QR (and an uploaded
+guide, if present) goes to the native share sheet. Gmail, Outlook and generic
+`mailto:` compose links cannot attach downloaded files automatically, so Mijah
+downloads the QR and attaches it in her chosen mail app, along with the guide.
+Mark **Email sent** after sending; this is
+a staff checklist, not provider delivery confirmation. No email is sent by the
+site or by the scheduled sync.
 
-Supabase values are not required to render the foundation page. They will be
-required when backend integration begins.
+## Checks
 
-## Quality checks
-
-```bash
-npm run lint
-npm run typecheck
-npm run build
-```
+Run `npm run lint`, `npm run typecheck`, and `npm run build`. Test sharing on the
+actual phone and desktop mail apps before the participant send.

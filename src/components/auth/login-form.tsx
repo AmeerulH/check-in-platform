@@ -1,5 +1,6 @@
 "use client";
 
+import { LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -69,7 +70,7 @@ export function LoginForm({
         onClick={() => void signInWithGoogle()}
         type="button"
       >
-        <span aria-hidden="true" className="google-mark">G</span>
+        {googleLoading ? <LoaderCircle aria-hidden="true" className="spin" size={18} /> : <span aria-hidden="true" className="google-mark">G</span>}
         {googleLoading ? "Opening Google…" : accessDenied ? "Continue with a different Google account" : "Continue with Google"}
       </button>
       <p

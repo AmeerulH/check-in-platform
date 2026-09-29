@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("guest_credentials")
-    .select("id, public_id, guest:guests!inner(display_name, status)")
+    .select("id, public_id, guest:guests!inner(display_name, status, ticket_type, title, organization, country, speaker_mode)")
     .eq("public_id", parsed.data.publicId)
     .eq("token_digest", digestCredentialToken(parsed.data.token))
     .is("revoked_at", null)
@@ -49,6 +49,11 @@ export async function POST(request: Request) {
   return apiSuccess({
     data: {
       guestName: guest.display_name,
+      ticketType: guest.ticket_type,
+      designation: guest.title,
+      organization: guest.organization,
+      country: guest.country,
+      speakerMode: guest.speaker_mode,
       passUrl,
       qrDataUrl: await createPassQrDataUrl(passUrl),
     },

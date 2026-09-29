@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app/app-shell";
+import { ConferenceDaySwitcher } from "@/components/dashboard/conference-day-switcher";
 import { LiveAttendance } from "@/components/dashboard/live-attendance";
 import { requireStaffMember } from "@/lib/auth/staff";
 import { EVENT_ID, EVENT_TIMEZONE } from "@/lib/event";
@@ -45,10 +46,10 @@ function formatEventDate(date: string) {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ login?: string }>;
+  searchParams: Promise<{ login?: string; date?: string }>;
 }) {
   const staffMember = await requireStaffMember();
-  const { login } = await searchParams;
+  const { login, date } = await searchParams;
   const admin = createSupabaseAdminClient();
   const { data: eventDays } = await admin
     .from("event_days")
@@ -57,6 +58,7 @@ export default async function DashboardPage({
     .order("local_date") as { data: EventDay[] | null };
   const currentLocalDate = localDate(EVENT_TIMEZONE);
   const eventDay =
+    eventDays?.find((day) => day.local_date === date) ??
     eventDays?.find((day) => day.local_date >= currentLocalDate) ??
     eventDays?.at(-1);
 
@@ -114,10 +116,15 @@ export default async function DashboardPage({
             <p className="eyebrow">
               {eventDay ? formatEventDate(eventDay.local_date) : "Event day unavailable"}
             </p>
-            <h1>Today’s attendance</h1>
+            <h1>Conference attendance</h1>
           </div>
           <span className="connection-status">Live attendance updates</span>
         </header>
+        <ConferenceDaySwitcher
+          days={(eventDays ?? []).map((day) => ({ date: day.local_date, label: formatEventDate(day.local_date) }))}
+          key={eventDay?.local_date}
+          selectedDate={eventDay?.local_date ?? null}
+        >
         {login === "success" && (
           <p className="status-message status-success" role="status">
             Signed in successfully. Your staff access is active.
@@ -125,7 +132,7 @@ export default async function DashboardPage({
         )}
         <section aria-label="Attendance summary" className="metric-grid">
           <article>
-            <span>Invited today</span>
+            <span>Invited guests</span>
             <strong>{invited}</strong>
             <small>Active guest passes</small>
           </article>
@@ -168,6 +175,7 @@ export default async function DashboardPage({
             )}
           </ol>
         </section>
+        </ConferenceDaySwitcher>
         </div>
       </LiveAttendance>
     </AppShell>

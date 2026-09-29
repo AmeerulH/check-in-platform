@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, LoaderCircle } from "lucide-react";
 import { FormEvent, useState } from "react";
 
 type GuestResponse = {
@@ -129,6 +129,7 @@ export function GuestFormPreview() {
               Cancel
             </Link>
             <button disabled={status === "saving"} type="submit">
+              {status === "saving" && <LoaderCircle aria-hidden="true" className="spin" size={18} />}
               {status === "saving" ? "Saving guest…" : "Save guest and create QR"}
             </button>
           </div>
