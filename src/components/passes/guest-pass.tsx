@@ -80,6 +80,8 @@ export function GuestPass({ publicId }: { publicId: string }) {
     );
   }
 
+  const isOnline = /\bonline\b/i.test(state.ticketType ?? "");
+
   return (
     <main className="pass-shell">
       <section className="pass-card">
@@ -93,9 +95,11 @@ export function GuestPass({ publicId }: { publicId: string }) {
           {state.country && <div><dt>Country</dt><dd>{state.country}</dd></div>}
           {state.speakerMode && <div><dt>Speaker attendance</dt><dd>{state.speakerMode === "in_person" ? "In-person" : "Virtual"}</dd></div>}
         </dl>
-        <p>Present this QR code if you visit the conference on site from 12–15 October.</p>
-        <img className="pass-qr" alt={`GTP guest pass for ${state.guestName}`} src={state.qrDataUrl} />
-        <p className="pass-note">Keep this pass private. It is valid throughout the event.</p>
+        {isOnline ? <p>No QR code is needed for online participation.</p> : <>
+          <p>Present this QR code if you visit the conference on site from 12–15 October.</p>
+          <img className="pass-qr" alt={`GTP guest pass for ${state.guestName}`} src={state.qrDataUrl} />
+        </>}
+        <p className="pass-note">Keep this registration page private. It is valid throughout the event.</p>
         <button className="button button-secondary" onClick={() => window.print()} type="button">
           Print pass
         </button>

@@ -27,12 +27,14 @@ the guest action. Avoid running simultaneous syncs.
 
 ## 5 October email preparation
 
-Upload the approved participant-guide PDF in **Sheet sync**. Each guest's
-**Share** action prepares their private registration link, QR PNG and the guide.
-If the browser supports file sharing, both files go to the native share sheet.
-Gmail, Outlook and generic `mailto:` compose links cannot attach downloaded
-files automatically, so on unsupported devices Mijah downloads both files and
-attaches them in her chosen mail app. Mark **Email sent** after sending; this is
+Each guest's **Share** action prepares their private registration link and QR
+PNG for on-site guests. Online participants get their individual details without
+a QR prompt. The participant guide is optional in the app; the team can attach its own
+copy when sending. If the browser supports file sharing, the QR (and an uploaded
+guide, if present) goes to the native share sheet. Gmail, Outlook and generic
+`mailto:` compose links cannot attach downloaded files automatically, so Mijah
+downloads the QR and attaches it in her chosen mail app, along with the guide.
+Mark **Email sent** after sending; this is
 a staff checklist, not provider delivery confirmation. No email is sent by the
 site or by the scheduled sync.
 
