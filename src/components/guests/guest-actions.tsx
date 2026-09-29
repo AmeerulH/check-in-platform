@@ -9,6 +9,7 @@ type GuestActionsProps = {
   guestEmail: string;
   guestId: string;
   guestName: string;
+  emailMarkedSentAt?: string | null;
 };
 
 type CredentialResponse = {
@@ -31,7 +32,7 @@ type ErrorResponse = {
   };
 };
 
-export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsProps) {
+export function GuestActions({ guestEmail, guestId, guestName, emailMarkedSentAt }: GuestActionsProps) {
   const shareButtonRef = useRef<HTMLButtonElement>(null);
   const sharePopoverRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -41,6 +42,7 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
   const [confirmingReplacement, setConfirmingReplacement] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [qrFile, setQrFile] = useState<File | null>(null);
+  const [guideFile, setGuideFile] = useState<File | null>(null);
   const [passUrl, setPassUrl] = useState<string | null>(null);
   const [shareMessage, setShareMessage] = useState("");
   const [sharePopoverPosition, setSharePopoverPosition] = useState<{ left: number; top: number } | null>(null);
@@ -82,6 +84,9 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
       }
 
       setQrFile(await createQrFile(body.data.qrDataUrl));
+      const guideResponse = await fetch("/api/guide");
+      setGuideFile(guideResponse.ok ? new File([await guideResponse.blob()], "GTP-2026-participant-guide.pdf", { type: "application/pdf" }) : null);
+      setShareMessage(guideResponse.ok ? "" : "Participant guide unavailable. Ask an organizer to upload it in Sheet sync before sending.");
       setPassUrl(body.data.passUrl);
       showSharePopover();
       router.refresh();
@@ -94,21 +99,21 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
   }
 
   const subject = "Your GTP 2026 QR pass";
-  const emailBody = `Hello ${guestName},\n\nYour GTP 2026 QR pass is attached. Please keep it available on your phone and present it at registration.${passUrl ? `\n\nYou can also open your pass here: ${passUrl}` : ""}`;
+  const emailBody = `Hello ${guestName},\n\nHere are your individual GTP 2026 registration details${passUrl ? `: ${passUrl}` : "."}\n\nPlease find your QR pass and participant guide attached. You can use the QR pass if you visit the conference on site from 12–15 October.`;
 
   async function sharePass() {
-    if (!qrFile || !navigator.share) return;
+    if (!qrFile || !guideFile || !navigator.share) return;
 
     try {
       setIsPreparingShare(true);
-      if (!navigator.canShare?.({ files: [qrFile] })) {
-        setShareMessage("This browser cannot attach files to the share sheet. Download the PNG, then attach it in your mail app.");
+      if (!navigator.canShare?.({ files: [qrFile, guideFile] })) {
+        setShareMessage("This browser cannot attach both files to the share sheet. Download them, then attach them in your mail app.");
         return;
       }
       await navigator.share({
         title: subject,
         text: emailBody,
-        files: [qrFile],
+        files: [qrFile, guideFile],
       });
     } catch {
       // Closing a native share sheet is an expected cancellation.
@@ -128,9 +133,10 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
     setAction("share");
     setMessage("");
     try {
-      const [response, linkResponse] = await Promise.all([
+      const [response, linkResponse, guideResponse] = await Promise.all([
         fetch(`/api/guests/${guestId}/pass-file`),
         fetch(`/api/guests/${guestId}/pass-link`),
+        fetch("/api/guide"),
       ]);
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as ErrorResponse | null;
@@ -147,7 +153,9 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
         ? (await linkResponse.json()) as PassLinkResponse
         : null;
       setQrFile(file);
+      setGuideFile(guideResponse.ok ? new File([await guideResponse.blob()], "GTP-2026-participant-guide.pdf", { type: "application/pdf" }) : null);
       setPassUrl(linkBody?.data?.passUrl ?? null);
+      setShareMessage(guideResponse.ok ? "" : "Participant guide unavailable. Ask an organizer to upload it in Sheet sync before sending.");
       showSharePopover();
     } catch {
       setMessage("We could not retrieve this QR file. Check your connection and try again.");
@@ -169,6 +177,25 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
     if (!qrFile) return;
     triggerDownload(qrFile);
     setShareMessage("QR PNG downloaded. Attach it to your email before sending.");
+  }
+
+  function downloadGuideFile() {
+    if (!guideFile) return;
+    triggerDownload(guideFile);
+    setShareMessage("Guide downloaded. Attach both files before sending.");
+  }
+
+  async function markEmailSent() {
+    setAction("share");
+    try {
+      const response = await fetch(`/api/guests/${guestId}`, { method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "mark_email_sent" }) });
+      const body = await response.json() as ErrorResponse;
+      if (!response.ok) throw new Error(body.error?.message ?? "Could not mark this email sent.");
+      setMessage("Marked as sent by staff. Delivery is not verified by the website.");
+      router.refresh();
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not mark this email sent."); }
+    finally { setAction(null); }
   }
 
   async function downloadStoredPass() {
@@ -230,7 +257,7 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
         type="button"
       >
         {action === "share" ? <LoaderCircle aria-hidden="true" className="spin" size={16} /> : <Mail size={16} />}
-        {action === "share" ? "Loading…" : "Share QR"}
+        {action === "share" ? "Loading…" : "Share"}
       </button>
       <button
         aria-label={`Download QR for ${guestName}`}
@@ -318,6 +345,7 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
               onClick={() => {
                 sharePopoverRef.current?.hidePopover();
                 setQrFile(null);
+                setGuideFile(null);
                 setPassUrl(null);
                 setShareMessage("");
               }}
@@ -325,19 +353,20 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
             >
               <X size={18} />
             </button>
-            <strong id={`share-pass-${guestId}`}>Pass ready to share</strong>
-            <p>Share the PNG directly, or download it first to attach it in an email.</p>
+            <strong id={`share-pass-${guestId}`}>{guideFile ? "Pass ready to share" : "QR pass ready"}</strong>
+            <p>{guideFile ? "This guest’s QR, private link and participant guide are ready. Choose your mail app, then check the recipient and attachments before sending." : "The participant guide has not been uploaded yet. You can download this QR now, then return here to prepare the full email."}</p>
             <div className="guest-share-options">
-              {typeof navigator !== "undefined" && "share" in navigator && (
+              {guideFile && typeof navigator !== "undefined" && "share" in navigator && (
                 <button disabled={isPreparingShare} onClick={() => void sharePass()} type="button">
-                  {isPreparingShare ? "Preparing QR…" : "Share QR file"}
+                  {isPreparingShare ? "Preparing files…" : "Share QR and guide"}
                 </button>
               )}
               <button onClick={downloadQrFile} type="button">
                 <Download aria-hidden="true" size={16} />
                 Download PNG
               </button>
-              {passUrl && (
+              {guideFile && <button onClick={downloadGuideFile} type="button"><Download aria-hidden="true" size={16} />Download guide PDF</button>}
+              {passUrl && guideFile && (
                 <>
                   <a
                     href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(guestEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`}
@@ -353,10 +382,13 @@ export function GuestActions({ guestEmail, guestId, guestName }: GuestActionsPro
               )}
             </div>
             <p className="guest-share-note">
-              {passUrl
-                ? "Compose options include the private pass link; attach the downloaded PNG before sending."
-                : "This older QR can be attached, but needs one regeneration before its direct link can be shared."}
+              {passUrl && guideFile
+                ? "Compose links include this guest’s private pass link. External mail apps may require you to attach the downloaded QR and guide manually."
+                : guideFile ? "This older QR can be attached, but needs one regeneration before its direct link can be shared." : "Upload the approved participant guide before preparing this guest’s email."}
             </p>
+            <button disabled={action !== null || Boolean(emailMarkedSentAt) || !guideFile} onClick={() => void markEmailSent()} type="button">
+              {emailMarkedSentAt ? "Email marked sent" : "Mark email sent after sending"}
+            </button>
             {shareMessage && <p className="guest-share-message" role="status">{shareMessage}</p>}
           </div>
         )}

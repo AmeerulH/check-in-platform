@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { AppShell } from "@/components/app/app-shell";
 import { LiveAttendance } from "@/components/dashboard/live-attendance";
 import { requireStaffMember } from "@/lib/auth/staff";
@@ -45,10 +47,10 @@ function formatEventDate(date: string) {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ login?: string }>;
+  searchParams: Promise<{ login?: string; date?: string }>;
 }) {
   const staffMember = await requireStaffMember();
-  const { login } = await searchParams;
+  const { login, date } = await searchParams;
   const admin = createSupabaseAdminClient();
   const { data: eventDays } = await admin
     .from("event_days")
@@ -57,6 +59,7 @@ export default async function DashboardPage({
     .order("local_date") as { data: EventDay[] | null };
   const currentLocalDate = localDate(EVENT_TIMEZONE);
   const eventDay =
+    eventDays?.find((day) => day.local_date === date) ??
     eventDays?.find((day) => day.local_date >= currentLocalDate) ??
     eventDays?.at(-1);
 
@@ -118,6 +121,11 @@ export default async function DashboardPage({
           </div>
           <span className="connection-status">Live attendance updates</span>
         </header>
+        <nav aria-label="Conference day" className="day-tabs">
+          {(eventDays ?? []).map((day) => <Link aria-current={eventDay?.id === day.id ? "page" : undefined}
+            className={eventDay?.id === day.id ? "day-tab day-tab-active" : "day-tab"}
+            href={`/dashboard?date=${day.local_date}`} key={day.id}>{formatEventDate(day.local_date)}</Link>)}
+        </nav>
         {login === "success" && (
           <p className="status-message status-success" role="status">
             Signed in successfully. Your staff access is active.

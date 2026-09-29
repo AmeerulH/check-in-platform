@@ -1325,3 +1325,25 @@ Implementation tickets and phase plans must reference the approved version of th
 | Production operations | Requires review |
 | Master specification v1 | Draft |
 
+## 27. Registration Sheet and October 2026 communication update
+
+The approved follow-up plan supersedes the CSV-only import and manual pass-attachment
+assumptions above. The source is the GTP2026 Registration Namelist Google Sheet,
+Sheet1. A server-only read-only service account syncs it daily at 08:00 Malaysia
+time; organizers can also run Sync now. New normalized emails import automatically.
+Changes to existing guests wait for organizer review. Missing or changed source
+rows do not delete guests, rotate passes, or overwrite local speaker-mode labels.
+The registration ID is informational because source values can be blank or shared.
+
+Every imported invitee can receive a QR pass for optional on-site visits, even
+when a ticket label says online participation. The separate public online
+registration process does not issue QR codes. Speakers remain registered guests;
+organizers label their in-person or virtual speaker attendance mode in this app.
+The individual private pass page also displays that person's registration details.
+
+Mijah sends individual messages on 5 October from her own chosen mail app. The
+site prepares a personal link, QR PNG and one approved participant-guide PDF,
+and shares both files through native sharing where supported. External mail
+compose windows cannot be relied upon to attach files, so the fallback provides
+downloads and explicit attachment instructions. Staff mark email sent manually;
+the website does not claim provider-confirmed delivery.

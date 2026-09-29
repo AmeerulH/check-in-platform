@@ -31,10 +31,14 @@ export async function getAttendanceLog({
   date,
   offset = 0,
   search,
+  outcome,
+  sort = "newest",
 }: {
   date?: string;
   offset?: number;
   search?: string;
+  outcome?: "valid_first" | "valid_repeat";
+  sort?: "newest" | "oldest";
 }): Promise<AttendanceLogPage> {
   const admin = createSupabaseAdminClient();
   const { data: eventDays, error: eventDaysError } = await admin
@@ -67,10 +71,11 @@ export async function getAttendanceLog({
     .from("scan_events")
     .select("id, guest_id, event_day_id, outcome, received_at")
     .in("event_day_id", eventDayIds)
-    .order("received_at", { ascending: false })
+    .order("received_at", { ascending: sort === "oldest" })
     .range(offset, offset + PAGE_SIZE);
 
   if (matchingGuestIds) query = query.in("guest_id", matchingGuestIds);
+  if (outcome) query = query.eq("outcome", outcome);
   const { data: scans, error: scansError } = await query;
   if (scansError) throw new Error("Check-in records are unavailable.");
 

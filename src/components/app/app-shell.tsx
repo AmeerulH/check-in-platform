@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, LayoutDashboard, QrCode, ShieldCheck, Users } from "lucide-react";
+import { ClipboardList, LayoutDashboard, QrCode, ShieldCheck, Users, RefreshCw } from "lucide-react";
 
 import { LogoutButton } from "@/components/auth/logout-button";
 import type { StaffMember } from "@/lib/auth/staff";
@@ -19,7 +19,7 @@ export function AppShell({
     { href: "/scanner", label: "Scan pass", icon: QrCode },
     { href: "/attendance", label: "Check-ins", icon: ClipboardList },
     ...(staffMember.role === "organizer"
-      ? [{ href: "/admin/staff", label: "Staff access", icon: ShieldCheck }]
+      ? [{ href: "/admin/imports", label: "Sheet sync", icon: RefreshCw }, { href: "/admin/staff", label: "Staff access", icon: ShieldCheck }]
       : []),
   ];
 

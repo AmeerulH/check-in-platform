@@ -1,7 +1,7 @@
 "use client";
 
 import { LoaderCircle, UserPlus } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type StaffAccessManagerProps = {
@@ -30,6 +30,16 @@ export function StaffAccessManager({
   const [savingStaffId, setSavingStaffId] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [staffSearch, setStaffSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [accessFilter, setAccessFilter] = useState("");
+  const [staffSort, setStaffSort] = useState("email");
+  const filteredStaff = useMemo(() => staffMembers.filter((staff) =>
+    staff.normalized_email.toLowerCase().includes(staffSearch.toLowerCase()) &&
+    (!roleFilter || staff.role === roleFilter) &&
+    (!accessFilter || String(staff.active) === accessFilter),
+  ).sort((a, b) => staffSort === "role" ? a.role.localeCompare(b.role) || a.normalized_email.localeCompare(b.normalized_email) : a.normalized_email.localeCompare(b.normalized_email)),
+  [staffMembers, staffSearch, roleFilter, accessFilter, staffSort]);
 
   async function addStaffMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -140,6 +150,12 @@ export function StaffAccessManager({
             <p>{staffMembers.length} people can access this event workspace.</p>
           </div>
         </div>
+        <div className="directory-toolbar directory-filter-row">
+          <label><span className="sr-only">Search staff</span><input onChange={(event) => setStaffSearch(event.target.value)} placeholder="Search email" type="search" value={staffSearch} /></label>
+          <label><span className="sr-only">Filter role</span><select onChange={(event) => setRoleFilter(event.target.value)} value={roleFilter}><option value="">All roles</option><option value="organizer">Organizers</option><option value="scanner">Scanners</option><option value="viewer">Viewers</option></select></label>
+          <label><span className="sr-only">Filter access</span><select onChange={(event) => setAccessFilter(event.target.value)} value={accessFilter}><option value="">All access</option><option value="true">Active</option><option value="false">Inactive</option></select></label>
+          <label><span className="sr-only">Sort staff</span><select onChange={(event) => setStaffSort(event.target.value)} value={staffSort}><option value="email">Email A–Z</option><option value="role">Role A–Z</option></select></label>
+        </div>
         <div className="table-wrap">
           <table className="staff-access-table">
             <thead>
@@ -151,7 +167,7 @@ export function StaffAccessManager({
               </tr>
             </thead>
             <tbody>
-              {staffMembers.map((staffMember) => (
+              {filteredStaff.map((staffMember) => (
                 <tr key={staffMember.id}>
                   <td data-label="Email">{staffMember.normalized_email}</td>
                   <td data-label="Role">

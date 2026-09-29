@@ -4,7 +4,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { LoaderCircle, Search } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
-import type { AttendanceLogItem, AttendanceLogPage } from "@/lib/attendance";
+import type { AttendanceLogPage } from "@/lib/attendance";
 import { EVENT_TIMEZONE } from "@/lib/event";
 
 type AttendanceLogProps = {
@@ -21,14 +21,20 @@ async function fetchAttendancePage({
   date,
   offset,
   search,
+  outcome,
+  sort,
 }: {
   date: string;
   offset: number;
   search: string;
+  outcome: string;
+  sort: string;
 }) {
   const params = new URLSearchParams({ offset: String(offset) });
   if (date) params.set("date", date);
   if (search) params.set("search", search);
+  if (outcome) params.set("outcome", outcome);
+  if (sort) params.set("sort", sort);
   const response = await fetch(`/api/attendance?${params}`);
   const body = (await response.json()) as AttendanceResponse;
 
@@ -61,11 +67,13 @@ export function AttendanceLog({ eventDays, initialPage }: AttendanceLogProps) {
   const [date, setDate] = useState("");
   const [search, setSearch] = useState("");
   const [submittedSearch, setSubmittedSearch] = useState("");
-  const isDefaultFilter = !date && !submittedSearch;
+  const [outcome, setOutcome] = useState("");
+  const [sort, setSort] = useState("newest");
+  const isDefaultFilter = !date && !submittedSearch && !outcome && sort === "newest";
   const attendanceQuery = useInfiniteQuery({
-    queryKey: ["attendance-log", { date, search: submittedSearch }],
+    queryKey: ["attendance-log", { date, search: submittedSearch, outcome, sort }],
     queryFn: ({ pageParam }) =>
-      fetchAttendancePage({ date, search: submittedSearch, offset: pageParam }),
+      fetchAttendancePage({ date, search: submittedSearch, offset: pageParam, outcome, sort }),
     initialPageParam: 0,
     initialData: isDefaultFilter
       ? { pages: [initialPage], pageParams: [0] }
@@ -74,16 +82,17 @@ export function AttendanceLog({ eventDays, initialPage }: AttendanceLogProps) {
   });
   const items = attendanceQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const isFiltering = attendanceQuery.isLoading && !isDefaultFilter;
+  const { fetchNextPage, hasNextPage, isFetchingNextPage } = attendanceQuery;
 
   useEffect(() => {
     const root = scrollRootRef.current;
     const sentinel = sentinelRef.current;
-    if (!root || !sentinel || !attendanceQuery.hasNextPage) return;
+    if (!root || !sentinel || !hasNextPage) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && !attendanceQuery.isFetchingNextPage) {
-          void attendanceQuery.fetchNextPage();
+        if (entries[0]?.isIntersecting && !isFetchingNextPage) {
+          void fetchNextPage();
         }
       },
       { root, rootMargin: "180px" },
@@ -91,9 +100,9 @@ export function AttendanceLog({ eventDays, initialPage }: AttendanceLogProps) {
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [
-    attendanceQuery.fetchNextPage,
-    attendanceQuery.hasNextPage,
-    attendanceQuery.isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   ]);
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
@@ -123,6 +132,8 @@ export function AttendanceLog({ eventDays, initialPage }: AttendanceLogProps) {
             ))}
           </select>
         </label>
+        <label><span className="sr-only">Scan result</span><select onChange={(event) => setOutcome(event.target.value)} value={outcome}><option value="">All results</option><option value="valid_first">First arrivals</option><option value="valid_repeat">Repeat scans</option></select></label>
+        <label><span className="sr-only">Sort check-ins</span><select onChange={(event) => setSort(event.target.value)} value={sort}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
         <button disabled={isFiltering} type="submit">
           {isFiltering && <LoaderCircle aria-hidden="true" className="spin" size={16} />}
           {isFiltering ? "Filtering…" : "Apply filters"}

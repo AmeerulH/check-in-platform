@@ -8,6 +8,8 @@ const querySchema = z.object({
   date: z.iso.date().optional(),
   offset: z.coerce.number().int().min(0).max(10_000).default(0),
   search: z.string().trim().max(120).optional(),
+  outcome: z.enum(["valid_first", "valid_repeat"]).optional(),
+  sort: z.enum(["newest", "oldest"]).default("newest"),
 });
 
 export async function GET(request: Request) {
@@ -19,6 +21,8 @@ export async function GET(request: Request) {
     date: url.searchParams.get("date") || undefined,
     offset: url.searchParams.get("offset") || undefined,
     search: url.searchParams.get("search") || undefined,
+    outcome: url.searchParams.get("outcome") || undefined,
+    sort: url.searchParams.get("sort") || undefined,
   });
 
   if (!parsed.success) {
