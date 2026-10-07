@@ -28,7 +28,10 @@ export function RegistrationImportManager({ latest, changes, guide }: {
       if (!response.ok) throw new Error(body.error?.message ?? "Sync failed.");
       setMessage(`Sync finished: ${body.data.created} new, ${body.data.pendingReview} changes queued, ${body.data.passFailures.length} pass errors.`);
       router.refresh();
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Sync failed."); }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Sync failed.");
+      router.refresh();
+    }
     finally { setBusy(null); }
   }
 
@@ -57,12 +60,14 @@ export function RegistrationImportManager({ latest, changes, guide }: {
   }
 
   const summary = latest?.summary && typeof latest.summary === "object" ? latest.summary as Record<string, unknown> : {};
+  const tab = typeof summary.tab === "string" && summary.tab ? summary.tab : null;
   return <div className="admin-stack">
     <section className="content-panel admin-panel">
       <h2>Sheet connection</h2>
-      <p>GTP2026 Registration Namelist · Sheet1 · daily at 08:00 Malaysia time</p>
+      <p>GTP2026 Registration Namelist{tab ? ` · ${tab}` : ""} · daily at 08:00 Malaysia time</p>
       <button disabled={busy !== null} onClick={() => void syncNow()} type="button">{busy === "sync" && <LoaderCircle aria-hidden="true" className="spin" size={16} />}{busy === "sync" ? "Syncing…" : "Sync now"}</button>
       <p>Last run: {latest ? `${latest.status} · ${new Date(latest.created_at).toLocaleString("en-MY")}` : "No run yet"}</p>
+      {typeof summary.error === "string" && summary.error ? <p>Last error: {summary.error}</p> : null}
       {latest && <p>Rows: {String(summary.sourceRows ?? "—")} · New: {String(summary.created ?? "—")} · Changes queued: {String(summary.pendingReview ?? "—")}</p>}
       {Array.isArray(summary.invalidRows) && summary.invalidRows.length > 0 && <p>Rows needing review: {summary.invalidRows.join(", ")}</p>}
       {Array.isArray(summary.duplicateRows) && summary.duplicateRows.length > 0 && <p>Possible duplicates: {summary.duplicateRows.join(", ")}</p>}

@@ -1328,8 +1328,9 @@ Implementation tickets and phase plans must reference the approved version of th
 ## 27. Registration Sheet and October 2026 communication update
 
 The approved follow-up plan supersedes the CSV-only import and manual pass-attachment
-assumptions above. The source is the GTP2026 Registration Namelist Google Sheet,
-Sheet1. A server-only read-only service account syncs it daily at 08:00 Malaysia
+assumptions above. The source is the GTP2026 Registration Namelist Google Sheet.
+The sync selects the first visible tab whose columns A, C and E are NAME, EMAIL
+and TICKETS. A server-only read-only service account syncs it daily at 08:00 Malaysia
 time; organizers can also run Sync now. New normalized emails import automatically.
 Changes to existing guests wait for organizer review. Missing or changed source
 rows do not delete guests, rotate passes, or overwrite local speaker-mode labels.
