@@ -4,22 +4,28 @@ import { BrowserQRCodeReader } from "@zxing/browser";
 import { Camera, Keyboard, LoaderCircle, RefreshCw, SquareStop } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
+import { ManualCheckIn } from "@/components/scanner/manual-check-in";
+import { EVENT_TIMEZONE } from "@/lib/event";
+import { deviceLabel } from "@/lib/scanner/device-label";
 import {
   addPendingScan,
   getPendingScans,
   removePendingScan,
+  updatePendingScan,
   type PendingScan,
 } from "@/lib/scanner/pending-scans";
 
 type ScannerStatus = "idle" | "requesting" | "scanning" | "submitting" | "success" | "repeat" | "pending" | "error";
 
+type CheckInData = {
+  guest_name: string;
+  outcome: "valid_first" | "valid_repeat";
+  scan_count: number;
+  received_at: string;
+};
+
 type CheckInResponse = {
-  data?: {
-    guest_name: string;
-    outcome: "valid_first" | "valid_repeat";
-    scan_count: number;
-    received_at: string;
-  };
+  data?: CheckInData;
   error?: {
     code?: string;
     message?: string;
@@ -29,27 +35,70 @@ type CheckInResponse = {
 
 type ScannerControls = { stop: () => void };
 
-function deviceLabel() {
-  const storageKey = "gtp-scanner-device-label";
-  const existing = window.localStorage.getItem(storageKey);
-  if (existing) return existing;
+const SAME_PASS_COOLDOWN_MS = 4_000;
 
-  const label = `Web scanner ${crypto.randomUUID().slice(0, 8)}`;
-  window.localStorage.setItem(storageKey, label);
-  return label;
+function formatCapturedAt(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat("en-MY", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: EVENT_TIMEZONE,
+  }).format(parsed);
+}
+
+async function postCheckIn(scan: PendingScan): Promise<
+  | { ok: true; data: CheckInData }
+  | { ok: false; retryable: boolean; message: string }
+> {
+  try {
+    const response = await fetch("/api/check-in", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        payload: scan.payload,
+        clientScanId: scan.clientScanId,
+        deviceLabel: scan.deviceLabel,
+        capturedAt: scan.capturedAt,
+      }),
+    });
+    const body = (await response.json()) as CheckInResponse;
+    if (!response.ok || !body.data) {
+      return {
+        ok: false,
+        retryable: Boolean(body.error?.retryable),
+        message: body.error?.message ?? "We could not confirm this check-in. Please try again.",
+      };
+    }
+    return { ok: true, data: body.data };
+  } catch {
+    return {
+      ok: false,
+      retryable: true,
+      message: "Connection is unavailable. This scan is queued for confirmation.",
+    };
+  }
 }
 
 export function CheckInScanner() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<ScannerControls | null>(null);
   const lockedRef = useRef(false);
-  const retryPendingScansRef = useRef<() => Promise<void>>(async () => {});
+  const activeScanIdRef = useRef<string | null>(null);
+  const syncingRef = useRef(false);
+  const cooldownRef = useRef<{ payload: string; until: number } | null>(null);
+  const syncPendingScansRef = useRef<(options?: { quiet?: boolean }) => Promise<void>>(async () => {});
   const [manualPass, setManualPass] = useState("");
-  const [result, setResult] = useState<CheckInResponse["data"]>();
+  const [result, setResult] = useState<CheckInData>();
   const [isRetrying, setIsRetrying] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
   const [message, setMessage] = useState("Start the camera, then hold a GTP QR pass inside the frame.");
-  const [pendingCount, setPendingCount] = useState(0);
+  const [queueNote, setQueueNote] = useState("");
+  const [pendingScans, setPendingScans] = useState<PendingScan[]>([]);
   const [status, setStatus] = useState<ScannerStatus>("idle");
+  const queuedScans = pendingScans.filter((scan) => !scan.failed);
+  const failedScans = pendingScans.filter((scan) => scan.failed);
 
   function stopCamera() {
     controlsRef.current?.stop();
@@ -59,68 +108,118 @@ export function CheckInScanner() {
       stream.getTracks().forEach((track) => track.stop());
       if (videoRef.current) videoRef.current.srcObject = null;
     }
+    setCameraActive(false);
   }
 
-  async function refreshPendingCount() {
-    setPendingCount((await getPendingScans()).length);
+  async function refreshPendingScans() {
+    setPendingScans(await getPendingScans());
   }
 
   async function submitPass(payload: string, pendingScan?: PendingScan) {
+    const cooled = cooldownRef.current;
     if (lockedRef.current) return;
-    lockedRef.current = true;
-    stopCamera();
-    setResult(undefined);
-    setStatus("submitting");
-    setMessage("Confirming this pass with the check-in service…");
+    if (!pendingScan && cooled && cooled.payload === payload && Date.now() < cooled.until) return;
+
     const scan = pendingScan ?? {
       payload,
       clientScanId: crypto.randomUUID(),
       deviceLabel: deviceLabel(),
       capturedAt: new Date().toISOString(),
     };
+    lockedRef.current = true;
+    activeScanIdRef.current = scan.clientScanId;
+    setResult(undefined);
+    setStatus("submitting");
+    setMessage("Confirming this pass with the check-in service…");
+    let settled = false;
 
     try {
-      const response = await fetch("/api/check-in", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          payload: scan.payload,
-          clientScanId: scan.clientScanId,
-          deviceLabel: scan.deviceLabel,
-          capturedAt: scan.capturedAt,
-        }),
-      });
-      const body = (await response.json()) as CheckInResponse;
-
-      if (!response.ok || !body.data) {
-        if (body.error?.retryable) {
-          await addPendingScan(scan);
-          await refreshPendingCount();
+      const outcome = await postCheckIn(scan);
+      if (!outcome.ok) {
+        if (outcome.retryable) {
+          await addPendingScan({ ...scan, lastError: outcome.message });
+          await refreshPendingScans();
           setStatus("pending");
-          setMessage("Connection is unavailable. This scan is queued for confirmation.");
+          setMessage(outcome.message);
+          settled = true;
           return;
         }
+        if (pendingScan) {
+          await updatePendingScan(scan.clientScanId, {
+            attempts: (scan.attempts ?? 0) + 1,
+            failed: true,
+            lastError: outcome.message,
+          });
+          await refreshPendingScans();
+        }
         setStatus("error");
-        setMessage(body.error?.message ?? "We could not confirm this check-in. Please try again.");
+        setMessage(outcome.message);
+        settled = true;
         return;
       }
 
       await removePendingScan(scan.clientScanId);
-      await refreshPendingCount();
-      setResult(body.data);
-      setStatus(body.data.outcome === "valid_first" ? "success" : "repeat");
+      await refreshPendingScans();
+      setResult(outcome.data);
+      setStatus(outcome.data.outcome === "valid_first" ? "success" : "repeat");
       setMessage(
-        body.data.outcome === "valid_first"
-          ? `${body.data.guest_name} is checked in.`
-          : `${body.data.guest_name} has already checked in today.`,
+        outcome.data.outcome === "valid_first"
+          ? `${outcome.data.guest_name} is checked in.`
+          : `${outcome.data.guest_name} has already checked in today.`,
       );
+      settled = true;
     } catch {
-      await addPendingScan(scan);
-      await refreshPendingCount();
+      await addPendingScan({
+        ...scan,
+        lastError: "Connection is unavailable. This scan is queued for confirmation.",
+      });
+      await refreshPendingScans();
       setStatus("pending");
       setMessage("Connection is unavailable. This scan is queued for confirmation.");
+      settled = true;
     } finally {
+      if (!pendingScan) {
+        cooldownRef.current = { payload: scan.payload, until: Date.now() + SAME_PASS_COOLDOWN_MS };
+      }
+      activeScanIdRef.current = null;
       lockedRef.current = false;
+      if (!settled) {
+        setStatus("error");
+        setMessage("We could not confirm this check-in. Please try again.");
+      }
+    }
+  }
+
+  async function syncPendingScans(options?: { quiet?: boolean }) {
+    if (syncingRef.current) return;
+    syncingRef.current = true;
+    if (!options?.quiet) setIsRetrying(true);
+    let confirmed = 0;
+
+    try {
+      const scans = await getPendingScans();
+      for (const scan of scans) {
+        if (scan.failed || scan.clientScanId === activeScanIdRef.current) continue;
+        const outcome = await postCheckIn(scan);
+        if (outcome.ok) {
+          await removePendingScan(scan.clientScanId);
+          confirmed += 1;
+          continue;
+        }
+        await updatePendingScan(scan.clientScanId, {
+          attempts: (scan.attempts ?? 0) + 1,
+          failed: !outcome.retryable,
+          lastError: outcome.message,
+        });
+      }
+    } finally {
+      syncingRef.current = false;
+      if (!options?.quiet) setIsRetrying(false);
+      await refreshPendingScans();
+    }
+
+    if (confirmed > 0) {
+      setQueueNote(confirmed === 1 ? "1 queued scan was confirmed." : `${confirmed} queued scans were confirmed.`);
     }
   }
 
@@ -146,9 +245,11 @@ export function CheckInScanner() {
         },
       );
       controlsRef.current = controls;
+      setCameraActive(true);
       setStatus("scanning");
       setMessage("Scanning… keep the QR code steady inside the frame.");
     } catch {
+      setCameraActive(false);
       setStatus("error");
       setMessage(
         "We could not access the camera. Check browser permission, then try again or paste a pass link below.",
@@ -161,29 +262,20 @@ export function CheckInScanner() {
     if (manualPass.trim()) void submitPass(manualPass.trim());
   }
 
-  async function retryPendingScans() {
-    const scans = await getPendingScans();
-    if (!scans.length) return;
-
-    setIsRetrying(true);
-    try {
-      for (const scan of scans) {
-        await submitPass(scan.payload, scan);
-      }
-    } finally {
-      setIsRetrying(false);
-    }
+  async function dismissFailedScan(clientScanId: string) {
+    await removePendingScan(clientScanId);
+    await refreshPendingScans();
   }
 
   useEffect(() => {
-    retryPendingScansRef.current = retryPendingScans;
+    syncPendingScansRef.current = syncPendingScans;
   });
 
   useEffect(() => {
     const initialQueueRead = window.setTimeout(() => {
-      void refreshPendingCount();
+      void refreshPendingScans().then(() => syncPendingScansRef.current({ quiet: true }));
     }, 0);
-    const handleOnline = () => void retryPendingScansRef.current();
+    const handleOnline = () => void syncPendingScansRef.current({ quiet: true });
     window.addEventListener("online", handleOnline);
     return () => {
       window.clearTimeout(initialQueueRead);
@@ -192,11 +284,19 @@ export function CheckInScanner() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!queuedScans.length) return;
+    const interval = window.setInterval(() => {
+      void syncPendingScansRef.current({ quiet: true });
+    }, 20_000);
+    return () => window.clearInterval(interval);
+  }, [queuedScans.length]);
+
   return (
     <section className="scanner-grid">
       <div className="scanner-frame">
         <video className="scanner-video" muted playsInline ref={videoRef} />
-        {status !== "scanning" && status !== "submitting" && (
+        {!cameraActive && status !== "submitting" && (
           <div className="scanner-placeholder">
             <Camera aria-hidden="true" size={40} strokeWidth={1.4} />
             <strong>{status === "requesting" ? "Waiting for camera access" : "Ready to scan"}</strong>
@@ -217,10 +317,10 @@ export function CheckInScanner() {
         <h2>Check in a guest</h2>
         <ol>
           <li>Open the camera and point it at the guest’s QR pass.</li>
-          <li>Wait for the server-confirmed result before moving on.</li>
+          <li>The camera stays on. Wait for the confirmed name, then scan the next guest.</li>
           <li>Repeat scans are recorded without increasing attendance.</li>
         </ol>
-        {status === "scanning" ? (
+        {cameraActive ? (
           <button className="button button-secondary" onClick={stopCamera} type="button">
             <SquareStop aria-hidden="true" size={18} />
             Stop camera
@@ -236,11 +336,26 @@ export function CheckInScanner() {
             {status === "requesting" ? "Opening camera…" : "Start camera"}
           </button>
         )}
-        {pendingCount > 0 && (
-          <button className="button button-secondary" disabled={isRetrying || status === "submitting"} onClick={() => void retryPendingScans()} type="button">
+        {queuedScans.length > 0 && (
+          <button className="button button-secondary" disabled={isRetrying || status === "submitting"} onClick={() => void syncPendingScans()} type="button">
             {isRetrying ? <LoaderCircle aria-hidden="true" className="spin" size={18} /> : <RefreshCw aria-hidden="true" size={18} />}
-            {isRetrying ? "Retrying scans…" : `Retry ${pendingCount} pending ${pendingCount === 1 ? "scan" : "scans"}`}
+            {isRetrying ? "Retrying scans…" : `Retry ${queuedScans.length} pending ${queuedScans.length === 1 ? "scan" : "scans"}`}
           </button>
+        )}
+        {queueNote && <p className="lookup-note" role="status">{queueNote}</p>}
+        {failedScans.length > 0 && (
+          <div>
+            <h3>Needs review</h3>
+            <ul className="pending-review">
+              {failedScans.map((scan) => (
+                <li key={scan.clientScanId}>
+                  <strong>{formatCapturedAt(scan.capturedAt)}</strong>
+                  <span>{scan.lastError ?? "This scan could not be confirmed."}</span>
+                  <button onClick={() => void dismissFailedScan(scan.clientScanId)} type="button">Dismiss</button>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
         <form className="manual-pass-form" onSubmit={submitManualPass}>
           <label htmlFor="manual-pass">
@@ -258,6 +373,7 @@ export function CheckInScanner() {
             {status === "submitting" ? "Confirming pass…" : "Check in pass"}
           </button>
         </form>
+        <ManualCheckIn />
       </aside>
     </section>
   );

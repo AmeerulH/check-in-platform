@@ -2092,5 +2092,216 @@ tbody tr:last-child td {
 .change-fields p { overflow-wrap: anywhere; }
 .pass-details { display: grid; gap: .6rem; margin: 1.25rem 0; text-align: left; }
 .pass-details div { display: grid; grid-template-columns: minmax(7rem, 35%) 1fr; gap: .5rem; padding-bottom: .5rem; border-bottom: 1px solid #dce5e0; }
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.manual-check-in {
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.manual-check-in > label {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.lookup-search {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.625rem;
+}
+
+.lookup-search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+.lookup-results,
+.pending-review {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lookup-result,
+.pending-review li {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.lookup-result span,
+.pending-review span,
+.lookup-note {
+  color: var(--muted);
+}
+
+.lookup-note {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.lookup-result .status-badge {
+  justify-self: start;
+}
+
+.lookup-result button,
+.lookup-confirm button,
+.pending-review button {
+  justify-self: start;
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  border-radius: 0.625rem;
+  background: var(--foreground);
+  color: white;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lookup-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.lookup-confirm button:last-child,
+.pending-review button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--foreground);
+}
+
+.lookup-result button:disabled,
+.pending-review button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.attendance-upload {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.25rem;
+}
+
+.attendance-upload form,
+.attendance-upload label {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.attendance-upload label {
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.attendance-upload textarea,
+.attendance-upload select {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.625rem;
+  background: white;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.attendance-upload textarea {
+  min-height: 12rem;
+  resize: vertical;
+}
+
+.attendance-upload h2,
+.scanner-instructions h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.import-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.import-summary article {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.875rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+
+.import-summary span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.import-summary strong {
+  font-size: 1.5rem;
+}
+
+.import-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.upload-file input {
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+@media (max-width: 48rem) {
+  .heading-actions {
+    flex-direction: column;
+  }
+
+  .app-navigation {
+    display: flex;
+  }
+
+  .nav-link {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
 .pass-details dt { color: #4a655c; }
 .pass-details dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }

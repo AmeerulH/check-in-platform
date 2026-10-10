@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { apiError, apiSuccess } from "@/lib/api/response";
 import { requireApiStaff } from "@/lib/auth/api";
+import { describeCheckInError } from "@/lib/check-in";
 import { digestCredentialToken } from "@/lib/credentials";
 import { isCheckInTestMode } from "@/lib/env/server";
 import { getPublicEnv } from "@/lib/env/public";
@@ -85,31 +86,15 @@ export async function POST(request: Request) {
     .single();
   const result = data as CheckInResult | null;
 
-  if (error?.message.includes("PASS_INVALID_OR_REVOKED")) {
-    return apiError({
-      code: "PASS_INVALID_OR_REVOKED",
-      message: "This guest pass is invalid or is no longer active.",
-      status: 404,
-    });
-  }
-
-  if (error?.message.includes("EVENT_NOT_ACTIVE")) {
-    return apiError({
-      code: "SCAN_EVENT_NOT_ACTIVE",
-      message: "Check-in is only available during the scheduled event dates.",
-      status: 403,
-    });
-  }
-
-  if (error?.message.includes("SCAN_ACCESS_DENIED")) {
-    return apiError({
-      code: "AUTH_ACCESS_DENIED",
-      message: "Your staff access is unavailable for check-in.",
-      status: 403,
-    });
-  }
-
   if (error || !result) {
+    const described = describeCheckInError(error?.message);
+    if (described) {
+      return apiError({
+        code: described.code,
+        message: described.message,
+        status: described.status,
+      });
+    }
     console.error("Unable to record check-in.", {
       code: error?.code,
       message: error?.message,

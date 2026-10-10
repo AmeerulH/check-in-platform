@@ -14,7 +14,7 @@ export default async function ScannerPage() {
           <div>
             <p className="eyebrow">Registration desk</p>
             <h1>Scan a guest pass</h1>
-            <p>Hold the QR code inside the frame. A result is only confirmed after the server responds.</p>
+            <p>Hold the QR code inside the frame. A result is only confirmed after the server responds. If a pass will not scan, search for the guest by name.</p>
           </div>
         </header>
         <CheckInScanner />

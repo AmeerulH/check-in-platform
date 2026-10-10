@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "loadtest": "node scripts/load-test-check-in.mjs",
     "bootstrap:admin": "node scripts/bootstrap-admin.mjs"
   },
   "dependencies": {

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { AttendanceLog } from "@/components/attendance/attendance-log";
 import { AppShell } from "@/components/app/app-shell";
 import { getAttendanceLog } from "@/lib/attendance";
@@ -22,11 +24,19 @@ export default async function AttendancePage() {
   return (
     <AppShell currentPath="/attendance" staffMember={staffMember}>
       <div className="workspace attendance-workspace">
-        <header className="workspace-heading">
+        <header className="workspace-heading workspace-heading-actions">
           <div>
             <p className="eyebrow">Attendance record</p>
             <h1>All check-ins</h1>
             <p>Search confirmed arrivals and review repeat scans across every event day.</p>
+          </div>
+          <div className="heading-actions">
+            {staffMember.role !== "scanner" && (
+              <a className="button button-secondary" href="/api/attendance/roster">Download roster</a>
+            )}
+            {staffMember.role === "organizer" && (
+              <Link className="button button-primary" href="/admin/attendance-upload">Upload attendance</Link>
+            )}
           </div>
         </header>
         <AttendanceLog
