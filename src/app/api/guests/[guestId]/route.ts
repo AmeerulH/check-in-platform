@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { apiError, apiSuccess } from "@/lib/api/response";
 import { requireApiStaff } from "@/lib/auth/api";
+import { normalizeEmail } from "@/lib/auth/staff";
 import { EVENT_ID } from "@/lib/event";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -9,6 +10,17 @@ const paramsSchema = z.object({ guestId: z.uuid() });
 const updateSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("speaker_mode"), mode: z.enum(["in_person", "virtual"]).nullable() }),
   z.object({ action: z.literal("mark_email_sent") }),
+  z.object({
+    action: z.literal("edit"),
+    displayName: z.string().trim().min(2).max(120),
+    email: z.email().transform(normalizeEmail),
+    organization: z.string().trim().max(160),
+    title: z.string().trim().max(160),
+    ticketType: z.string().trim().max(120),
+    category: z.string().trim().max(80),
+    region: z.string().trim().max(120),
+    country: z.string().trim().max(120),
+  }),
 ]);
 
 export async function PATCH(request: Request, context: { params: Promise<{ guestId: string }> }) {
@@ -24,15 +36,26 @@ export async function PATCH(request: Request, context: { params: Promise<{ guest
   if (body.data.action === "speaker_mode" && guest.category?.toLowerCase() !== "speaker") {
     return apiError({ code: "GUEST_INVALID_INPUT", message: "Attendance mode is only available for speakers.", status: 400 });
   }
-  const values = body.data.action === "speaker_mode"
-    ? { speaker_mode: body.data.mode }
-    : { email_marked_sent_at: new Date().toISOString(), email_marked_sent_by: access.staffMember.id };
-  const { error } = await admin.from("guests").update(values).eq("id", guest.id);
+  const input = body.data;
+  const values = input.action === "speaker_mode"
+    ? { speaker_mode: input.mode }
+    : input.action === "edit"
+      ? {
+        display_name: input.displayName, normalized_email: input.email,
+        organization: input.organization || null, title: input.title || null,
+        ticket_type: input.ticketType || null, category: input.category || null,
+        region: input.region || null, country: input.country || null,
+        // Speaker attendance mode only applies to speakers.
+        ...(input.category.toLowerCase() === "speaker" ? {} : { speaker_mode: null }),
+      }
+      : { email_marked_sent_at: new Date().toISOString(), email_marked_sent_by: access.staffMember.id };
+  const { error } = await admin.from("guests").update(values).eq("id", guest.id).eq("event_id", EVENT_ID);
+  if (error?.code === "23505") return apiError({ code: "GUEST_DUPLICATE_EMAIL", message: "That email is already used by another guest.", status: 409 });
   if (error) return apiError({ code: "AUTH_SERVICE_UNAVAILABLE", message: "Guest update failed.", status: 503 });
   await admin.from("audit_events").insert({ event_id: EVENT_ID, actor_membership_id: access.staffMember.id,
-    action: body.data.action === "speaker_mode" ? "guest.speaker_mode_updated" : "guest.email_marked_sent",
+    action: input.action === "speaker_mode" ? "guest.speaker_mode_updated" : input.action === "edit" ? "guest.edited" : "guest.email_marked_sent",
     entity_type: "guest", entity_id: guest.id,
-    metadata: body.data.action === "speaker_mode" ? { mode: body.data.mode } : {},
+    metadata: input.action === "speaker_mode" ? { mode: input.mode } : input.action === "edit" ? { fields: Object.keys(values) } : {},
   });
   return apiSuccess({ data: { id: guest.id } });
 }

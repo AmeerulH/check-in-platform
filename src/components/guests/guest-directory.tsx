@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { GuestActions } from "@/components/guests/guest-actions";
+import { GuestEditor } from "@/components/guests/guest-editor";
 
 export type DirectoryGuest = {
   id: string; display_name: string; normalized_email: string; organization: string | null;
   category: string | null; ticket_type: string | null; speaker_mode: string | null;
   status: string; email_marked_sent_at: string | null; created_at: string;
+  title?: string | null; region?: string | null; country?: string | null;
   pending?: { changeId: string; name: string; email: string } | null;
 };
 
@@ -78,7 +80,7 @@ export function GuestDirectory({ guests }: { guests: DirectoryGuest[] }) {
         <td data-label="Ticket">{guest.ticket_type ?? guest.category ?? "—"}</td>
         <td data-label="Speaker mode">{guest.category?.toLowerCase() === "speaker" ? <span className="inline-loading-control"><select aria-label={`Attendance mode for ${guest.display_name}`} disabled={busyId === guest.id} onChange={(event) => void setMode(guest.id, event.target.value)} value={guest.speaker_mode ?? ""}><option value="">Unassigned</option><option value="in_person">In-person</option><option value="virtual">Virtual</option></select>{busyId === guest.id && <span role="status"><LoaderCircle aria-hidden="true" className="spin" size={16} /><span className="sr-only">Saving speaker mode</span></span>}</span> : "—"}</td>
         <td data-label="Email">{guest.email_marked_sent_at ? <span className="status-badge status-checked_in">Marked sent</span> : <span className="status-badge status-not_arrived">Not marked sent</span>}</td>
-        <td className="guest-actions-cell" data-label="Actions"><GuestActions guestEmail={guest.normalized_email} guestId={guest.id} guestName={guest.display_name} ticketType={guest.ticket_type} emailMarkedSentAt={guest.email_marked_sent_at} /></td>
+        <td className="guest-actions-cell" data-label="Actions"><GuestActions leading={<GuestEditor guest={guest} />} guestEmail={guest.normalized_email} guestId={guest.id} guestName={guest.display_name} ticketType={guest.ticket_type} emailMarkedSentAt={guest.email_marked_sent_at} /></td>
       </tr>)}{!filtered.length && <tr><td colSpan={6}><div className="empty-state"><strong>No invitees match these filters</strong><span>Adjust the search or filter controls.</span></div></td></tr>}</tbody>
     </table></div>
     <p className="directory-footer"><Link href="/admin/imports">Review Sheet sync and participant guide</Link></p>

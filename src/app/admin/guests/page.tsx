@@ -15,7 +15,7 @@ export default async function GuestsPage() {
   const guests: DirectoryGuest[] = [];
   for (let from = 0; ; from += 1000) {
     const { data } = await admin.from("guests")
-      .select("id, display_name, normalized_email, organization, category, ticket_type, speaker_mode, status, email_marked_sent_at, created_at")
+      .select("id, display_name, normalized_email, organization, category, ticket_type, speaker_mode, status, email_marked_sent_at, created_at, title, region, country")
       .eq("event_id", EVENT_ID).order("display_name").order("id").range(from, from + 999);
     guests.push(...((data ?? []) as DirectoryGuest[]));
     if ((data?.length ?? 0) < 1000) break;
