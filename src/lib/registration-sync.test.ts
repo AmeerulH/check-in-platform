@@ -15,6 +15,7 @@ const adminMock = vi.hoisted(() => {
   const state = {
     guests: [] as Array<Record<string, unknown>>,
     imports: [] as Array<Record<string, unknown>>,
+    guestUpdates: [] as Array<Record<string, unknown>>,
     guestInsertError: null as DbError,
     importInsertError: null as DbError,
   };
@@ -22,6 +23,7 @@ const adminMock = vi.hoisted(() => {
   function reset() {
     state.guests = [];
     state.imports = [];
+    state.guestUpdates = [];
     state.guestInsertError = null;
     state.importInsertError = null;
   }
@@ -34,6 +36,7 @@ const adminMock = vi.hoisted(() => {
       state.guests.push(row);
       return { data: { id: row.id }, error: null };
     }
+    if (table === "guests" && op === "update") { state.guestUpdates.push(payload as Record<string, unknown>); return { data: null, error: null }; }
     if (table === "imports" && op === "insert") {
       const record = payload as { status?: string };
       if (record.status === "previewed" && state.importInsertError) return { data: null, error: state.importInsertError };
@@ -230,11 +233,62 @@ describe("registration sheet sync", () => {
     expect(JSON.stringify(adminMock.state.guests[0])).not.toContain("IGNORE");
   });
 
-  it("reports duplicate emails", async () => {
-    installGoogle(registrationSheet([guestRow("Ada Lovelace", "Ada@Example.com"), guestRow("Ada Again", "ada@example.com")]));
+  it("creates a guest for every row, even when rows share an email", async () => {
+    installGoogle(registrationSheet([guestRow("Majid Hussain", "Shared@Example.com"), guestRow("Hasana Islam", "shared@example.com")]));
     const summary = await syncRegistrationSheet("actor-1");
-    expect(summary).toMatchObject({ sourceRows: 2, created: 1, duplicateRows: [3] });
-    expect(adminMock.state.guests).toHaveLength(1);
+    expect(summary).toMatchObject({ sourceRows: 2, created: 2, duplicateRows: [] });
+    expect(adminMock.state.guests.map((guest) => guest.display_name)).toEqual(["Majid Hussain", "Hasana Islam"]);
+    // A second run recognises both guests instead of creating more.
+    const again = await syncRegistrationSheet("actor-1");
+    expect(again).toMatchObject({ created: 0, updated: 0, unchanged: 2 });
+    expect(adminMock.state.guests).toHaveLength(2);
+  });
+
+  it("reports a row instead of failing when the database still limits one guest per email", async () => {
+    installGoogle(registrationSheet([guestRow("Ada Lovelace", "ada@example.com")]));
+    adminMock.state.guestInsertError = { code: "23505", message: "duplicate key value violates unique constraint" };
+    const summary = await syncRegistrationSheet("actor-1");
+    expect(summary).toMatchObject({ created: 0, duplicateRows: [2] });
+  });
+
+  describe("when the Sheet disagrees with an existing guest", () => {
+    const seeded = (extra: Record<string, unknown> = {}) => ({
+      id: "guest-seed", display_name: "Saet Nyoon Woon", normalized_email: "ada@example.com", ticket_type: "Speaker",
+      category: "Speaker", title: null, organization: "Analytical", region: null, country: null,
+      external_reference: "OLD-REF", email_marked_sent_at: null, ...extra,
+    });
+
+    it("follows the Sheet when one row owns the email and nothing was sent", async () => {
+      adminMock.state.guests = [seeded()];
+      installGoogle(registrationSheet([guestRow("Ada Lovelace", "ada@example.com")]));
+      const summary = await syncRegistrationSheet("actor-1");
+      expect(summary).toMatchObject({ created: 0, updated: 1, updatedRows: [2], pendingReview: 0 });
+      expect(adminMock.state.guestUpdates).toEqual([expect.objectContaining({ display_name: "Ada Lovelace", ticket_type: "Delegate" })]);
+    });
+
+    it("holds the change when an invite is already marked sent", async () => {
+      adminMock.state.guests = [seeded({ email_marked_sent_at: "2026-10-10T00:00:00Z" })];
+      installGoogle(registrationSheet([guestRow("Ada Lovelace", "ada@example.com")]));
+      const summary = await syncRegistrationSheet("actor-1");
+      expect(summary).toMatchObject({ created: 0, updated: 0 });
+      expect(adminMock.state.guestUpdates).toHaveLength(0);
+    });
+
+    it("moves a guest to a new email when the name and organization match and the old email left the Sheet", async () => {
+      adminMock.state.guests = [seeded({ display_name: "Ada Lovelace", normalized_email: "old@example.com", ticket_type: "Delegate", category: "Delegate", external_reference: null })];
+      installGoogle(registrationSheet([guestRow("Ada Lovelace", "new@example.com")]));
+      const summary = await syncRegistrationSheet("actor-1");
+      expect(summary).toMatchObject({ created: 0, updated: 1 });
+      expect(adminMock.state.guestUpdates[0]).toMatchObject({ normalized_email: "new@example.com" });
+    });
+
+    it("does not re-point a guest whose old email is still on the Sheet", async () => {
+      adminMock.state.guests = [seeded({ display_name: "Ada Lovelace", normalized_email: "old@example.com", ticket_type: "Delegate", category: "Delegate", external_reference: null })];
+      installGoogle(registrationSheet([guestRow("Ada Lovelace", "new@example.com"), guestRow("Ada Lovelace", "old@example.com")]));
+      const summary = await syncRegistrationSheet("actor-1");
+      expect(summary).toMatchObject({ created: 1, updated: 1 });
+      expect(adminMock.state.guests.map((guest) => guest.normalized_email).sort()).toEqual(["new@example.com", "old@example.com"]);
+    });
   });
 
   it("quotes tab names and honors the spreadsheet override", async () => {

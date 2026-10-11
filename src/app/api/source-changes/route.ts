@@ -14,9 +14,17 @@ export async function PATCH(request: Request) {
   if (!body.success) return apiError({ code: "GUEST_INVALID_INPUT", message: "Choose a valid review action.", status: 400 });
   const admin = createSupabaseAdminClient();
   const { data: change } = await admin.from("guest_source_changes")
-    .select("id, guest_id").eq("id", body.data.changeId).eq("event_id", EVENT_ID).eq("status", "pending").maybeSingle();
+    .select("id, guest_id, proposed").eq("id", body.data.changeId).eq("event_id", EVENT_ID).eq("status", "pending").maybeSingle();
   if (!change) return apiError({ code: "IMPORT_CHANGE_NOT_FOUND", message: "This change is no longer pending.", status: 404 });
   if (body.data.decision === "apply") {
+    // The database function applies every field except the email, which the Sheet also owns.
+    const proposedEmail = z.email().safeParse((change.proposed as { normalized_email?: unknown } | null)?.normalized_email);
+    if (proposedEmail.success) {
+      const { error: emailError } = await admin.from("guests").update({ normalized_email: proposedEmail.data.trim().toLowerCase() })
+        .eq("id", change.guest_id).eq("event_id", EVENT_ID);
+      if (emailError?.code === "23505") return apiError({ code: "GUEST_DUPLICATE_EMAIL", message: "Another guest already has this email. Fix the Sheet row or remove the other guest first.", status: 409 });
+      if (emailError) return apiError({ code: "IMPORT_UNAVAILABLE", message: "Could not apply this change.", status: 503 });
+    }
     const { data, error } = await admin.rpc("apply_guest_source_change", {
       target_change_id: body.data.changeId, reviewer_id: access.staffMember.id,
     });

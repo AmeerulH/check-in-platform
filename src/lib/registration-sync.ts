@@ -67,18 +67,29 @@ async function commitRegistrationSheet(actorMembershipId: string | null, sheet: 
   const admin = createSupabaseAdminClient();
   const { rows, tab } = sheet;
   const { data: existing, error: existingError } = await admin.from("guests")
-    .select("id, display_name, normalized_email, ticket_type, category, title, organization, region, country, external_reference")
+    .select("id, display_name, normalized_email, ticket_type, category, title, organization, region, country, external_reference, email_marked_sent_at")
     .eq("event_id", EVENT_ID);
   if (existingError) throw new SheetSyncError("database write", errorDetail(existingError), { cause: existingError });
-  const byEmail = new Map((existing ?? []).map((guest) => [String(guest.normalized_email).toLowerCase(), guest]));
+  const roster = [...(existing ?? [])];
+  const claimed = new Set<string>(); // guests already matched to a Sheet row during this sync
+  const lower = (value: unknown) => tidy(String(value ?? "")).toLowerCase();
+  // How many Sheet rows list each email; shared emails are allowed, so identity is email + name.
+  const sheetEmailCounts = new Map<string, number>();
+  for (const { cells } of rows) {
+    const email = normalizeEmail(tidy(cells[2]));
+    sheetEmailCounts.set(email, (sheetEmailCounts.get(email) ?? 0) + 1);
+  }
+  const { data: pendingRows, error: pendingError } = await admin.from("guest_source_changes")
+    .select("guest_id").eq("event_id", EVENT_ID).eq("status", "pending");
+  if (pendingError) throw new SheetSyncError("database write", errorDetail(pendingError), { cause: pendingError });
+  const guestsWithPending = new Set((pendingRows ?? []).map((row) => row.guest_id as string));
   const sourceReferenceCounts = new Map<string, number>();
   for (const { cells } of rows) {
     const reference = tidy(cells[1]);
     if (reference) sourceReferenceCounts.set(reference, (sourceReferenceCounts.get(reference) ?? 0) + 1);
   }
-  const seenEmails = new Set<string>();
   const passQueue: Array<{ guestId: string; sheetRow: number }> = [];
-  const summary = { tab, sourceRows: rows.length, created: 0, pendingReview: 0, unchanged: 0, invalidRows: [] as number[], duplicateRows: [] as number[], passFailures: [] as number[] };
+  const summary = { tab, sourceRows: rows.length, created: 0, updated: 0, updatedRows: [] as number[], pendingReview: 0, unchanged: 0, invalidRows: [] as number[], duplicateRows: [] as number[], passFailures: [] as number[] };
   await admin.from("imports").update({ status: "failed", summary: { error: "Previous sync interrupted" } })
     .eq("event_id", EVENT_ID).eq("source_filename", SOURCE_FILENAME)
     .eq("status", "previewed").lt("created_at", new Date(Date.now() - 30 * 60_000).toISOString());
@@ -97,35 +108,71 @@ async function commitRegistrationSheet(actorMembershipId: string | null, sheet: 
       activeSheetRow = sheetRow;
       const source = parseRow(cells);
       if (!source) { summary.invalidRows.push(sheetRow); continue; }
-      if (seenEmails.has(source.normalized_email)) { summary.duplicateRows.push(sheetRow); continue; }
-      seenEmails.add(source.normalized_email);
+      // Every Sheet row is a guest, even when two rows share an email or a name. Match in order of confidence.
+      const free = roster.filter((guest) => !claimed.has(guest.id));
       const referenceMatch = source.external_reference && sourceReferenceCounts.get(source.external_reference) === 1
-        ? (existing ?? []).find((guest) => guest.external_reference === source.external_reference)
-        : null;
-      const current = byEmail.get(source.normalized_email) ?? referenceMatch;
+        ? free.find((guest) => guest.external_reference === source.external_reference)
+        : undefined;
+      let current = referenceMatch
+        ?? free.find((guest) => lower(guest.normalized_email) === source.normalized_email && lower(guest.display_name) === lower(source.display_name));
+      if (!current && sheetEmailCounts.get(source.normalized_email) === 1) {
+        // Only one row uses this email, so a different name on it is a rename or correction of the same guest.
+        const sameEmail = free.filter((guest) => lower(guest.normalized_email) === source.normalized_email);
+        if (sameEmail.length === 1) current = sameEmail[0];
+        else if (sameEmail.length > 1) { summary.duplicateRows.push(sheetRow); continue; }
+      }
       if (!current) {
-        // A changed email can look like a new registration. Hold likely matches for review.
-        const possibleMatch = (existing ?? []).find((guest) =>
-          (tidy(guest.display_name).toLowerCase() === source.display_name.toLowerCase() &&
-            tidy(guest.organization ?? "").toLowerCase() === tidy(source.organization ?? "").toLowerCase()),
-        );
-        if (possibleMatch) { summary.duplicateRows.push(sheetRow); continue; }
+        // A changed email looks like a new registration. Re-point a guest only when exactly one guest has the
+        // same name and organization and the Sheet no longer lists that guest's old email.
+        const sameIdentity = free.filter((guest) => lower(guest.display_name) === lower(source.display_name) &&
+          lower(guest.organization) === lower(source.organization));
+        if (sameIdentity.length === 1 && !sheetEmailCounts.has(lower(sameIdentity[0].normalized_email))) current = sameIdentity[0];
+      }
+      if (current) claimed.add(current.id);
+      if (!current) {
         const { data: created, error } = await admin.from("guests").insert({ event_id: EVENT_ID, ...source })
           .select("id").single();
+        // The database may still enforce one guest per email. Report the row instead of aborting the sync.
+        if (isUniqueViolation(error)) { summary.duplicateRows.push(sheetRow); continue; }
         if (error || !created) throw new SheetSyncError("database write", errorDetail(error ?? new Error("Guest insertion failed.")), { cause: error, sheetRow });
         summary.created += 1;
         passQueue.push({ guestId: created.id, sheetRow });
-        byEmail.set(source.normalized_email, { ...source, id: created.id });
+        claimed.add(created.id);
+        roster.push({ ...source, id: created.id, email_marked_sent_at: null });
         continue;
       }
       const changed = Object.entries(source).some(([key, value]) =>
         (current as Record<string, unknown>)[key] !== value,
       );
       if (!changed) {
+        // The Sheet already matches, so any change still waiting for review is stale.
+        if (guestsWithPending.has(current.id)) {
+          const { error: staleError } = await admin.from("guest_source_changes")
+            .update({ status: "dismissed", reviewed_at: new Date().toISOString() })
+            .eq("guest_id", current.id).eq("status", "pending");
+          if (staleError) throw staleError;
+        }
         summary.unchanged += 1;
         passQueue.push({ guestId: current.id, sheetRow });
         continue;
       }
+      if (!current.email_marked_sent_at) {
+        // The Sheet is the source of truth. Nothing has gone out to this guest yet, so follow it directly.
+        const { error: updateError } = await admin.from("guests").update(source)
+          .eq("id", current.id).eq("event_id", EVENT_ID);
+        if (isUniqueViolation(updateError)) { summary.duplicateRows.push(sheetRow); continue; }
+        if (updateError) throw updateError;
+        const { error: clearError } = await admin.from("guest_source_changes")
+          .update({ status: "dismissed", reviewed_at: new Date().toISOString() })
+          .eq("guest_id", current.id).eq("status", "pending");
+        if (clearError) throw clearError;
+        Object.assign(current, source); // keep the in-memory roster in step for later rows
+        summary.updated += 1;
+        summary.updatedRows.push(sheetRow);
+        passQueue.push({ guestId: current.id, sheetRow });
+        continue;
+      }
+      // An invite was already marked sent, so changing the guest could orphan what they received. Hold for review.
       const hash = createHash("sha256").update(JSON.stringify(source)).digest("hex");
       const { error: staleError } = await admin.from("guest_source_changes").update({ status: "dismissed" })
         .eq("guest_id", current.id).eq("status", "pending").neq("source_hash", hash);

@@ -11,6 +11,7 @@ export type DirectoryGuest = {
   id: string; display_name: string; normalized_email: string; organization: string | null;
   category: string | null; ticket_type: string | null; speaker_mode: string | null;
   status: string; email_marked_sent_at: string | null; created_at: string;
+  pending?: { changeId: string; name: string; email: string } | null;
 };
 
 export function GuestDirectory({ guests }: { guests: DirectoryGuest[] }) {
@@ -23,7 +24,7 @@ export function GuestDirectory({ guests }: { guests: DirectoryGuest[] }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const tickets = [...new Set(guests.map((guest) => guest.ticket_type).filter((value): value is string => Boolean(value)))].sort();
   const filtered = useMemo(() => guests.filter((guest) => {
-    const text = `${guest.display_name} ${guest.normalized_email} ${guest.organization ?? ""}`.toLowerCase();
+    const text = `${guest.display_name} ${guest.normalized_email} ${guest.organization ?? ""} ${guest.pending?.name ?? ""} ${guest.pending?.email ?? ""}`.toLowerCase();
     return text.includes(search.trim().toLowerCase()) && (!ticket || guest.ticket_type === ticket) &&
       (!speakerMode || (guest.category?.toLowerCase() === "speaker" && (speakerMode === "unassigned" ? !guest.speaker_mode : guest.speaker_mode === speakerMode)));
   }).sort((a, b) => {
@@ -45,6 +46,20 @@ export function GuestDirectory({ guests }: { guests: DirectoryGuest[] }) {
     finally { setBusyId(null); }
   }
 
+  async function applySheetVersion(guest: DirectoryGuest) {
+    if (!guest.pending) return;
+    if (!window.confirm(`Replace ${guest.display_name} with the Sheet version${guest.pending.name ? ` (${guest.pending.name})` : ""}?`)) return;
+    setBusyId(guest.id); setMessage("");
+    try {
+      const response = await fetch("/api/source-changes", { method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ changeId: guest.pending.changeId, decision: "apply" }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error?.message ?? "Could not apply the Sheet version.");
+      router.refresh();
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not apply the Sheet version."); }
+    finally { setBusyId(null); }
+  }
+
   return <section className="content-panel">
     <div className="directory-toolbar directory-filter-row">
       <label><span className="sr-only">Search guests</span><input onChange={(event) => setSearch(event.target.value)} placeholder="Search name, email or organization" type="search" value={search} /></label>
@@ -56,7 +71,9 @@ export function GuestDirectory({ guests }: { guests: DirectoryGuest[] }) {
     {message && <p className="status-message status-error" role="alert">{message}</p>}
     <div className="table-wrap"><table className="guest-directory-table"><thead><tr><th>Guest</th><th>Organization</th><th>Ticket</th><th>Speaker mode</th><th>Email</th><th><span className="sr-only">Actions</span></th></tr></thead>
       <tbody>{filtered.map((guest) => <tr key={guest.id}>
-        <td data-label="Guest"><div className="guest-table-cell"><strong>{guest.display_name}</strong><span>{guest.normalized_email}</span></div></td>
+        <td data-label="Guest"><div className="guest-table-cell"><strong>{guest.display_name}</strong><span>{guest.normalized_email}</span>
+          {guest.pending && <span className="status-badge status-not_arrived">Sheet change pending: {guest.pending.name || "update"}{guest.pending.email && guest.pending.email !== guest.normalized_email ? ` · ${guest.pending.email}` : ""}</span>}
+          {guest.pending && <button className="button button-secondary" disabled={busyId === guest.id} onClick={() => void applySheetVersion(guest)} type="button">Use Sheet version</button>}</div></td>
         <td data-label="Organization">{guest.organization ?? "—"}</td>
         <td data-label="Ticket">{guest.ticket_type ?? guest.category ?? "—"}</td>
         <td data-label="Speaker mode">{guest.category?.toLowerCase() === "speaker" ? <span className="inline-loading-control"><select aria-label={`Attendance mode for ${guest.display_name}`} disabled={busyId === guest.id} onChange={(event) => void setMode(guest.id, event.target.value)} value={guest.speaker_mode ?? ""}><option value="">Unassigned</option><option value="in_person">In-person</option><option value="virtual">Virtual</option></select>{busyId === guest.id && <span role="status"><LoaderCircle aria-hidden="true" className="spin" size={16} /><span className="sr-only">Saving speaker mode</span></span>}</span> : "—"}</td>

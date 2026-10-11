@@ -26,7 +26,7 @@ export function RegistrationImportManager({ latest, changes, guide }: {
       const response = await fetch("/api/registration-sync", { method: "POST" });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error?.message ?? "Sync failed.");
-      setMessage(`Sync finished: ${body.data.created} new, ${body.data.pendingReview} changes queued, ${body.data.passFailures.length} pass errors.`);
+      setMessage(`Sync finished: ${body.data.created} new, ${body.data.updated} updated from the Sheet, ${body.data.pendingReview} held for review, ${body.data.passFailures.length} pass errors.`);
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Sync failed.");
