@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ClipboardList, LayoutDashboard, QrCode, ShieldCheck, Upload, Users, RefreshCw } from "lucide-react";
 
+import { ScrollToTop } from "@/components/app/scroll-to-top";
 import { LogoutButton } from "@/components/auth/logout-button";
 import type { StaffMember } from "@/lib/auth/staff";
 
@@ -66,6 +67,7 @@ export function AppShell({
         <LogoutButton />
       </header>
       <main className="app-main">{children}</main>
+      <ScrollToTop />
     </div>
   );
 }

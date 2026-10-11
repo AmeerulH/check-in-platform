@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { GuestActions } from "@/components/guests/guest-actions";
 import { GuestEditor } from "@/components/guests/guest-editor";
@@ -23,7 +23,17 @@ export function GuestDirectory({ guests }: { guests: DirectoryGuest[] }) {
   const [speakerMode, setSpeakerMode] = useState("");
   const [sort, setSort] = useState("name");
   const [message, setMessage] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // On phones the open panel is pinned and tall, so tuck it away once the user scrolls on to the list.
+  useEffect(() => {
+    if (!filtersOpen) return;
+    const origin = window.scrollY;
+    const close = () => { if (Math.abs(window.scrollY - origin) > 80) setFiltersOpen(false); };
+    window.addEventListener("scroll", close, { passive: true });
+    return () => window.removeEventListener("scroll", close);
+  }, [filtersOpen]);
+  const activeFilters = [ticket, speakerMode, sort !== "name" ? sort : ""].filter(Boolean).length;
   const tickets = [...new Set(guests.map((guest) => guest.ticket_type).filter((value): value is string => Boolean(value)))].sort();
   const filtered = useMemo(() => guests.filter((guest) => {
     const text = `${guest.display_name} ${guest.normalized_email} ${guest.organization ?? ""} ${guest.pending?.name ?? ""} ${guest.pending?.email ?? ""}`.toLowerCase();
@@ -64,11 +74,17 @@ export function GuestDirectory({ guests }: { guests: DirectoryGuest[] }) {
 
   return <section className="content-panel">
     <div className="directory-toolbar directory-filter-row">
-      <label><span className="sr-only">Search guests</span><input onChange={(event) => setSearch(event.target.value)} placeholder="Search name, email or organization" type="search" value={search} /></label>
-      <label><span className="sr-only">Ticket type</span><select onChange={(event) => setTicket(event.target.value)} value={ticket}><option value="">All tickets</option>{tickets.map((value) => <option key={value}>{value}</option>)}</select></label>
-      <label><span className="sr-only">Speaker attendance mode</span><select onChange={(event) => setSpeakerMode(event.target.value)} value={speakerMode}><option value="">All speaker modes</option><option value="in_person">In-person speakers</option><option value="virtual">Virtual speakers</option><option value="unassigned">Unassigned speakers</option></select></label>
-      <label><span className="sr-only">Sort guests</span><select onChange={(event) => setSort(event.target.value)} value={sort}><option value="name">Name A–Z</option><option value="organization">Organization A–Z</option><option value="ticket">Ticket A–Z</option><option value="newest">Newest first</option></select></label>
-      <span className="guest-count">{filtered.length} of {guests.length} invitees</span>
+      <label className="filter-search"><span className="sr-only">Search guests</span><input onChange={(event) => setSearch(event.target.value)} placeholder="Search name, email or organization" type="search" value={search} /></label>
+      <button aria-controls="guest-filter-panel" aria-expanded={filtersOpen} className="filters-toggle" onClick={() => setFiltersOpen((open) => !open)} type="button">
+        <SlidersHorizontal aria-hidden="true" size={16} />Filters{activeFilters > 0 && <span className="filters-count" aria-label={`${activeFilters} active`}>{activeFilters}</span>}
+      </button>
+      <div className="filter-panel" data-open={filtersOpen} id="guest-filter-panel">
+        <label><span className="filter-label">Ticket type</span><select onChange={(event) => setTicket(event.target.value)} value={ticket}><option value="">All tickets</option>{tickets.map((value) => <option key={value}>{value}</option>)}</select></label>
+        <label><span className="filter-label">Speaker attendance mode</span><select onChange={(event) => setSpeakerMode(event.target.value)} value={speakerMode}><option value="">All speaker modes</option><option value="in_person">In-person speakers</option><option value="virtual">Virtual speakers</option><option value="unassigned">Unassigned speakers</option></select></label>
+        <label><span className="filter-label">Sort by</span><select onChange={(event) => setSort(event.target.value)} value={sort}><option value="name">Name A–Z</option><option value="organization">Organization A–Z</option><option value="ticket">Ticket A–Z</option><option value="newest">Newest first</option></select></label>
+        {activeFilters > 0 && <button className="filters-clear" onClick={() => { setTicket(""); setSpeakerMode(""); setSort("name"); }} type="button">Clear filters</button>}
+      </div>
+      <span aria-live="polite" className="guest-count">{filtered.length} of {guests.length} invitees</span>
     </div>
     {message && <p className="status-message status-error" role="alert">{message}</p>}
     <div className="table-wrap"><table className="guest-directory-table"><thead><tr><th>Guest</th><th>Organization</th><th>Ticket</th><th>Speaker mode</th><th>Email</th><th><span className="sr-only">Actions</span></th></tr></thead>
