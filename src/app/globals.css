@@ -1196,6 +1196,7 @@ tbody tr:last-child td {
 .guest-action-button,
 .guest-download-button,
 .guest-regenerate-button,
+.guest-edit-button,
 .guest-delete-button,
 .delete-confirmation button {
   display: inline-flex;
@@ -1222,7 +1223,8 @@ tbody tr:last-child td {
   color: #9c241c;
 }
 
-.guest-regenerate-button {
+.guest-regenerate-button,
+.guest-edit-button {
   width: 2.25rem;
   color: var(--muted);
 }
@@ -1237,7 +1239,8 @@ tbody tr:last-child td {
   color: var(--accent);
 }
 
-.guest-regenerate-button:hover {
+.guest-regenerate-button:hover,
+.guest-edit-button:hover {
   border-color: var(--accent);
   color: var(--accent);
 }
@@ -1875,12 +1878,14 @@ tbody tr:last-child td {
   .guest-action-button,
   .guest-download-button,
   .guest-regenerate-button,
+  .guest-edit-button,
   .guest-delete-button {
     min-height: 2.75rem;
   }
 
   .guest-download-button,
   .guest-regenerate-button,
+  .guest-edit-button,
   .guest-delete-button {
     width: 2.75rem;
   }
@@ -2305,3 +2310,50 @@ tbody tr:last-child td {
 }
 .pass-details dt { color: #4a655c; }
 .pass-details dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+
+/* Every dropdown gets the same chevron with breathing room from the right edge.
+   Selects that style their own chevron (forms, staff roles, date filter) are left alone. */
+select:not([multiple], .staff-role-select, .select-wrap select, .staff-form select, .attendance-date-filter select) {
+  padding-right: 2.5rem;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%235e7069' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.875rem center;
+  background-size: 1rem;
+  text-overflow: ellipsis;
+}
+
+.guest-edit-dialog {
+  width: min(34rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  overflow: auto;
+  padding: 0;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: 0 1.5rem 3rem rgb(20 60 50 / 0.22);
+}
+
+.guest-edit-dialog::backdrop { background: rgb(20 40 34 / 0.45); }
+
+.guest-edit-form { display: grid; gap: 1rem; padding: 1.25rem; }
+.guest-edit-form h2 { margin: 0; font-size: 1.125rem; }
+.guest-edit-note { margin: 0; color: var(--muted); font-size: 0.8125rem; }
+.guest-edit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+.guest-edit-grid label { display: grid; gap: 0.3rem; font-size: 0.8125rem; font-weight: 600; }
+.guest-edit-grid label.wide { grid-column: 1 / -1; }
+.guest-edit-grid input, .guest-edit-grid select {
+  min-height: 2.5rem; width: 100%; padding: 0.45rem 0.65rem; border: 1px solid var(--line);
+  border-radius: 0.55rem; background-color: #fff; color: inherit; font: inherit; font-weight: 400;
+}
+.guest-edit-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+.guest-edit-actions button {
+  display: inline-flex; min-height: 2.5rem; align-items: center; gap: 0.4rem; padding: 0 0.9rem;
+  border: 1px solid var(--line); border-radius: 0.5rem; background: var(--surface); color: inherit; font: inherit; font-weight: 650; cursor: pointer;
+}
+.guest-edit-actions button[type="submit"] { border-color: var(--accent); background: var(--accent); color: #fff; }
+.guest-edit-actions button:disabled { cursor: wait; opacity: 0.6; }
+@media (max-width: 34rem) { .guest-edit-grid { grid-template-columns: 1fr; } }

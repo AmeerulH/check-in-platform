@@ -14,6 +14,8 @@ type ImportResult = {
   newlyCheckedIn: number;
   unknownCount: number;
   inactiveCount: number;
+  ambiguousCount: number;
+  ambiguous: string[];
   failedCount: number;
   unknown: string[];
   inactive: string[];
@@ -156,6 +158,13 @@ export function AttendanceUpload({ eventDays }: { eventDays: string[] }) {
               <h3>Not matched</h3>
               <ul className="import-list">{result.unknown.map((email) => <li key={email}>{email}</li>)}</ul>
               {result.unknownCount > result.unknown.length && <p className="lookup-note">Showing the first {result.unknown.length}.</p>}
+            </div>
+          )}
+          {result.ambiguousCount > 0 && (
+            <div>
+              <h3>Shared emails: check in by name</h3>
+              <p className="lookup-note">More than one guest uses these emails, so nobody was checked in for them.</p>
+              <ul className="import-list">{result.ambiguous.map((email) => <li key={email}>{email}</li>)}</ul>
             </div>
           )}
           {result.inactiveCount > 0 && (

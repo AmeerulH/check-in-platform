@@ -137,14 +137,19 @@ export async function POST(request: Request) {
     });
   }
 
-  const guestsByEmail = new Map(matches.map((guest) => [guest.email, guest]));
+  // Several guests can share an email. Never guess which one arrived; leave those for the desk to check in by name.
+  const guestsByEmail = new Map<string, GuestMatch[]>();
+  for (const guest of matches) guestsByEmail.set(guest.email, [...(guestsByEmail.get(guest.email) ?? []), guest]);
   const inactive: string[] = [];
+  const ambiguous: string[] = [];
   const active: GuestMatch[] = [];
   for (const email of uniqueEmails) {
-    const guest = guestsByEmail.get(email);
-    if (!guest) unknown.push(email);
-    else if (guest.status !== "active") inactive.push(email);
-    else active.push(guest);
+    const candidates = guestsByEmail.get(email) ?? [];
+    const activeCandidates = candidates.filter((guest) => guest.status === "active");
+    if (!candidates.length) unknown.push(email);
+    else if (!activeCandidates.length) inactive.push(email);
+    else if (activeCandidates.length > 1) ambiguous.push(email);
+    else active.push(activeCandidates[0]);
   }
 
   const already = new Set<string>();
@@ -209,6 +214,7 @@ export async function POST(request: Request) {
         alreadyCheckedIn,
         unknownCount: unknown.length,
         inactiveCount: inactive.length,
+        ambiguousCount: ambiguous.length,
         failedCount: failed.length,
       },
     });
@@ -224,7 +230,9 @@ export async function POST(request: Request) {
       newlyCheckedIn,
       unknownCount: unknown.length,
       inactiveCount: inactive.length,
+      ambiguousCount: ambiguous.length,
       failedCount: failed.length,
+      ambiguous: ambiguous.slice(0, 50),
       unknown: unknown.slice(0, 50),
       inactive: inactive.slice(0, 50),
       failed: failed.slice(0, 50),

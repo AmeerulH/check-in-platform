@@ -2,7 +2,7 @@
 
 import { Download, LoaderCircle, Mail, RefreshCw, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 type GuestActionsProps = {
@@ -11,6 +11,7 @@ type GuestActionsProps = {
   guestName: string;
   ticketType: string | null;
   emailMarkedSentAt?: string | null;
+  leading?: ReactNode;
 };
 
 type CredentialResponse = {
@@ -33,7 +34,7 @@ type ErrorResponse = {
   };
 };
 
-export function GuestActions({ guestEmail, guestId, guestName, ticketType, emailMarkedSentAt }: GuestActionsProps) {
+export function GuestActions({ guestEmail, guestId, guestName, ticketType, emailMarkedSentAt, leading }: GuestActionsProps) {
   const isOnline = /\bonline\b/i.test(ticketType ?? "");
   const shareButtonRef = useRef<HTMLButtonElement>(null);
   const sharePopoverRef = useRef<HTMLDivElement>(null);
@@ -255,6 +256,7 @@ export function GuestActions({ guestEmail, guestId, guestName, ticketType, email
 
   return (
     <div className="guest-actions">
+      {leading}
       <button
         className="guest-action-button"
         disabled={action !== null}
